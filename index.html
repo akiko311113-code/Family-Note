@@ -359,13 +359,14 @@
 
   .del-btn{
     display: none;
-    border: none;
+    border: 1px solid var(--line);
     background: transparent;
     color: var(--ink-soft);
-    font-size: 18px;
+    font-size: 13px;
     line-height: 1;
-    padding: 4px 6px;
-    border-radius: 3px;
+    padding: 5px 10px;
+    border-radius: 4px;
+    white-space: nowrap;
   }
   .edit-mode .del-btn{ display: inline-block; }
   .del-btn:hover{ color: var(--danger); background: var(--surface-2); }
@@ -393,15 +394,17 @@
   .contact-row .field-label{ font-size: 13.5px; color: var(--ink-soft); white-space: nowrap; }
   .address-group{
     display: flex;
-    align-items: center;
-    gap: 8px;
-    flex-wrap: wrap;
-    padding: 4px 8px;
+    flex-direction: column;
+    gap: 6px;
+    width: 100%;
+    padding: 8px;
     border-radius: 8px;
     background: var(--surface-2);
   }
+  .address-group-row{ display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
   .postal-field{ flex: 0 1 100px; min-width: 80px; }
   .address-field{ flex: 1 1 380px; min-width: 220px; }
+  .address-field-full{ flex: 1 1 auto; min-width: 200px; }
   .phone-field{ flex: 0 1 150px; min-width: 110px; }
   .address-copy-select{
     display: none;
@@ -1237,7 +1240,7 @@
     var delBtn = document.createElement("button");
     delBtn.type = "button";
     delBtn.className = "del-btn";
-    delBtn.textContent = "×";
+    delBtn.textContent = "削除";
     delBtn.title = "この行を削除";
     delBtn.addEventListener("click", function(){
       var idx = tier.people.indexOf(person);
@@ -1254,14 +1257,18 @@
     contactRow.className = "contact-row";
 
     // 住所グループ(メイン/サブ)を1組作る。postalKey/addrKeyで保存先のプロパティ名を切り替える。
+    // 1行目: ラベル・郵便番号・住所(残り全幅)・地図リンク。2行目: 配偶者/親からコピーを並べる。
     function buildAddressGroup(label, postalKey, addrKey){
       var group = document.createElement("div");
       group.className = "address-group";
 
+      var row1 = document.createElement("div");
+      row1.className = "address-group-row";
+
       var groupLabel = document.createElement("span");
       groupLabel.className = "field-label";
       groupLabel.textContent = label;
-      group.appendChild(groupLabel);
+      row1.appendChild(groupLabel);
 
       var postalInput = document.createElement("input");
       postalInput.className = "field postal-field";
@@ -1282,10 +1289,10 @@
           save();
         });
       });
-      group.appendChild(postalInput);
+      row1.appendChild(postalInput);
 
       var addressInput = document.createElement("input");
-      addressInput.className = "field address-field";
+      addressInput.className = "field address-field address-field-full";
       addressInput.placeholder = label;
       addressInput.value = person[addrKey];
       addressInput.readOnly = !editMode;
@@ -1295,12 +1302,16 @@
         save();
         mapLink.refresh();
       });
-      group.appendChild(addressInput);
+      row1.appendChild(addressInput);
 
       var mapLink = buildQuickLink("🗺️", label + "をGoogleマップで開く", true, function(){
         return person[addrKey] ? mapsHref(person[addrKey]) : "";
       });
-      group.appendChild(mapLink.el);
+      row1.appendChild(mapLink.el);
+      group.appendChild(row1);
+
+      var row2 = document.createElement("div");
+      row2.className = "address-group-row";
 
       // 配偶者・親から住所をコピーするプルダウン(候補は開くたびに最新の状態で作り直す)
       function buildCopySelect(relLabel, candidatesFn){
@@ -1342,8 +1353,9 @@
         });
         return sel;
       }
-      group.appendChild(buildCopySelect("配偶者からコピー", findSpouseCandidates));
-      group.appendChild(buildCopySelect("親からコピー", findParentCandidates));
+      row2.appendChild(buildCopySelect("配偶者からコピー", findSpouseCandidates));
+      row2.appendChild(buildCopySelect("親からコピー", findParentCandidates));
+      group.appendChild(row2);
 
       return group;
     }
