@@ -279,6 +279,7 @@
   .name-field{ font-size: 19px; font-weight: 600; flex: 1 1 200px; min-width: 160px; }
   .row.is-step .name-field{ color: var(--ink-soft); font-weight: 400; }
   .alt-name-field{ font-size: 14px; color: var(--ink-soft); font-style: italic; flex: 1 1 110px; min-width: 80px; }
+  .alt-name-field.is-secondary-view{ font-size: 12px; opacity: 0.65; flex: 0 1 auto; min-width: 0; border-color: transparent; background: transparent; padding-left: 2px; }
   .relation-field{ color: var(--ink-soft); font-size: 16px; flex: 1 1 100px; min-width: 80px; }
 
   .num-input{ text-align: right; font-variant-numeric: tabular-nums; }
@@ -402,6 +403,12 @@
     background: var(--surface-2);
   }
   .address-group-row{ display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  .address-group.is-secondary-view{ padding: 2px 4px; background: transparent; opacity: 0.7; width: auto; }
+  .address-group.is-secondary-view .field{ font-size: 12px; border-color: transparent; background: transparent; padding: 2px 4px; }
+  .address-group.is-secondary-view .postal-field{ min-width: 60px; }
+  .address-group.is-secondary-view .address-field-full{ min-width: 120px; }
+  .address-group.is-secondary-view .field-label{ font-size: 11px; }
+  .address-group.is-secondary-view .quick-link{ width: 22px; height: 22px; font-size: 12px; }
   .postal-field{ flex: 0 1 100px; min-width: 80px; }
   .address-field{ flex: 1 1 380px; min-width: 220px; }
   .address-field-full{ flex: 1 1 auto; min-width: 200px; }
@@ -1099,7 +1106,7 @@
     mainLine.appendChild(nameInput);
 
     var altNameInput = document.createElement("input");
-    altNameInput.className = "field alt-name-field";
+    altNameInput.className = "field alt-name-field" + (editMode ? "" : " is-secondary-view");
     altNameInput.placeholder = "別名(英語名など)";
     altNameInput.value = person.altName;
     altNameInput.readOnly = !editMode;
@@ -1108,7 +1115,7 @@
       person.altName = altNameInput.value;
       save();
     });
-    mainLine.appendChild(altNameInput);
+    if(editMode || person.altName) mainLine.appendChild(altNameInput);
 
     var relInput = document.createElement("input");
     relInput.className = "field relation-field";
@@ -1365,6 +1372,7 @@
     var address2Group = buildAddressGroup("住所②", "postalCode2", "address2");
     var showAddress2 = person.showAddress2 || !!(person.postalCode2 || person.address2);
     address2Group.style.display = showAddress2 ? "" : "none";
+    if(!editMode) address2Group.classList.add("is-secondary-view");
 
     var address2Label = document.createElement("label");
     address2Label.className = "deceased-checkbox";
