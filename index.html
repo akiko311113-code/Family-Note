@@ -2380,7 +2380,7 @@
       var def = VIEW_DEFS[key];
       var isActive = (activeView === key);
       document.getElementById(def.section).style.display = isActive ? "block" : "none";
-      document.getElementById(def.toggle).textContent = isActive ? "一覧に戻る" : def.label;
+      document.getElementById(def.toggle).textContent = isActive ? "プロフィールに戻る" : def.label;
     });
     if(activeView === "tree"){
       var holder = document.getElementById("treeInner");
