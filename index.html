@@ -398,6 +398,9 @@
   .name-field{ font-size: 19px; font-weight: 600; flex: 1 1 200px; min-width: 160px; }
   .row.is-step .name-field{ color: var(--ink-soft); font-weight: 400; }
   .alt-name-field{ font-size: 14px; color: var(--ink-soft); font-style: italic; flex: 1 1 110px; min-width: 80px; }
+  /* 編集画面では、名前欄を短めに、別名欄を長めにする */
+  .edit-mode .name-field{ flex: 1 1 110px; min-width: 90px; }
+  .edit-mode .alt-name-field{ flex: 2 1 220px; min-width: 160px; }
   .alt-name-field.is-secondary-view{ font-size: 12px; opacity: 0.65; flex: 0 1 auto; min-width: 0; border-color: transparent; background: transparent; padding-left: 2px; }
   .relation-field{ color: var(--ink-soft); font-size: 16px; flex: 1 1 100px; min-width: 80px; }
 
@@ -534,6 +537,14 @@
   .phone-field{ flex: 0 1 150px; min-width: 110px; }
   .phone-group{ display: flex; align-items: center; gap: 8px; flex-wrap: wrap; width: 100%; }
   body:not(.edit-mode) .phone-group{ flex-wrap: nowrap; overflow-x: auto; }
+  .phone-sep{
+    display: inline-block;
+    width: 1px;
+    align-self: stretch;
+    background: var(--line);
+    margin: 0 20px;
+    flex-shrink: 0;
+  }
   .address-copy-select{
     display: none;
     font-size: 13px;
@@ -811,7 +822,7 @@
       { key: "grandchildren", label: "孫", people: [
         newPerson("")
       ]},
-      { key: "parents", label: "両親", people: [
+      { key: "parents", label: "親", people: [
         newPerson("夫の父"), newPerson("夫の母"), newPerson("妻の父"), newPerson("妻の母")
       ]},
       { key: "siblings", label: "兄弟姉妹", people: [
@@ -823,7 +834,7 @@
       { key: "niblings", label: "甥・姪", people: [
         newPerson("夫の兄弟の子")
       ]},
-      { key: "spouseParents", label: "子の配偶者の両親", people: [
+      { key: "spouseParents", label: "子の配偶者の親", people: [
         newPerson("長男の妻の父")
       ]},
       { key: "relatives", label: "親族", people: [
@@ -877,14 +888,14 @@
       selfTier.label = "夫婦";
     }
 
-    var relabel = { children: "子", childrenSpouses: "子の配偶者", spouseParents: "子の配偶者の両親" };
+    var relabel = { children: "子", childrenSpouses: "子の配偶者", spouseParents: "子の配偶者の親", parents: "親" };
     parsed.tiers.forEach(function(t){ if(relabel[t.key]) t.label = relabel[t.key]; });
 
-    // 旧「主人のご両親・ご兄弟」欄を「両親」欄へ移行(既存の入力内容は保持)
+    // 旧「主人のご両親・ご兄弟」欄を「親」欄へ移行(既存の入力内容は保持)
     var oldHusbandFamily = parsed.tiers.filter(function(t){ return t.key === "husbandFamily"; })[0];
     if(oldHusbandFamily){
       oldHusbandFamily.key = "parents";
-      oldHusbandFamily.label = "両親";
+      oldHusbandFamily.label = "親";
       oldHusbandFamily.people.forEach(function(p){
         if(p.relation === "主人の父") p.relation = "夫の父";
         if(p.relation === "主人の母") p.relation = "夫の母";
@@ -901,7 +912,7 @@
       if(idx >= 0) parsed.tiers.splice(idx + 1, 0, t);
       else parsed.tiers.push(t);
     }
-    ensureTier("parents", "両親", function(){ return [ newPerson("夫の父"), newPerson("夫の母"), newPerson("妻の父"), newPerson("妻の母") ]; }, "grandchildren");
+    ensureTier("parents", "親", function(){ return [ newPerson("夫の父"), newPerson("夫の母"), newPerson("妻の父"), newPerson("妻の母") ]; }, "grandchildren");
     ensureTier("siblings", "兄弟姉妹", function(){ return [ newPerson("夫の兄弟"), newPerson("妻の兄弟") ]; }, "parents");
     ensureTier("siblingsSpouses", "兄弟姉妹の配偶者", function(){ return [ newPerson("") ]; }, "siblings");
     ensureTier("niblings", "甥・姪", function(){ return [ newPerson("夫の兄弟の子") ]; }, "siblingsSpouses");
@@ -1599,6 +1610,11 @@
       return person.mobile ? telHref(person.mobile) : "";
     });
     phoneGroup.appendChild(mobileCallLink.el);
+
+    var phoneSep = document.createElement("span");
+    phoneSep.className = "phone-sep";
+    phoneSep.setAttribute("aria-hidden", "true");
+    phoneGroup.appendChild(phoneSep);
 
     var landlineLabel = document.createElement("span");
     landlineLabel.className = "field-label";
