@@ -400,6 +400,15 @@
     flex-wrap: wrap;
   }
   .contact-row .field-label{ font-size: 13.5px; color: var(--ink-soft); white-space: nowrap; }
+  .address-group{
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+    padding: 4px 8px;
+    border-radius: 8px;
+    background: var(--surface-2);
+  }
   .postal-field{ flex: 0 1 100px; min-width: 80px; }
   .address-field{ flex: 1 1 220px; min-width: 140px; }
   .phone-field{ flex: 0 1 150px; min-width: 110px; }
@@ -617,7 +626,7 @@
     return {
       id: uid(), name: "", altName: "", relation: relation || "", birth: "",
       deceased: false, deathDate: "", step: false, hideInTree: false,
-      postalCode: "", address: "", landline: "", mobile: ""
+      postalCode: "", address: "", postalCode2: "", address2: "", landline: "", mobile: ""
     };
   }
 
@@ -665,6 +674,8 @@
     p.hideInTree = !!p.hideInTree;
     p.postalCode = p.postalCode || "";
     p.address = p.address || "";
+    p.postalCode2 = p.postalCode2 || "";
+    p.address2 = p.address2 || "";
     p.landline = p.landline || "";
     p.mobile = p.mobile || "";
     return p;
@@ -1232,74 +1243,96 @@
     var contactRow = document.createElement("div");
     contactRow.className = "contact-row";
 
-    var postalInput = document.createElement("input");
-    postalInput.className = "field postal-field";
-    postalInput.placeholder = "郵便番号";
-    postalInput.value = person.postalCode;
-    postalInput.readOnly = !editMode;
-    postalInput.setAttribute("aria-label", "郵便番号");
-    postalInput.addEventListener("input", function(){
-      person.postalCode = postalInput.value;
-      save();
-    });
-    postalInput.addEventListener("blur", function(){
-      if(!editMode || person.address) return;
-      lookupAddressByPostal(postalInput.value, function(addr){
-        if(person.address) return;
-        person.address = addr;
-        addressInput.value = addr;
+    // 住所グループ(メイン/サブ)を1組作る。postalKey/addrKeyで保存先のプロパティ名を切り替える。
+    function buildAddressGroup(label, postalKey, addrKey){
+      var group = document.createElement("div");
+      group.className = "address-group";
+
+      var groupLabel = document.createElement("span");
+      groupLabel.className = "field-label";
+      groupLabel.textContent = label;
+      group.appendChild(groupLabel);
+
+      var postalInput = document.createElement("input");
+      postalInput.className = "field postal-field";
+      postalInput.placeholder = "郵便番号";
+      postalInput.value = person[postalKey];
+      postalInput.readOnly = !editMode;
+      postalInput.setAttribute("aria-label", label + " 郵便番号");
+      postalInput.addEventListener("input", function(){
+        person[postalKey] = postalInput.value;
         save();
       });
-    });
-    contactRow.appendChild(postalInput);
-
-    var addressInput = document.createElement("input");
-    addressInput.className = "field address-field";
-    addressInput.placeholder = "住所";
-    addressInput.value = person.address;
-    addressInput.readOnly = !editMode;
-    addressInput.setAttribute("aria-label", "住所");
-    addressInput.addEventListener("input", function(){
-      person.address = addressInput.value;
-      save();
-    });
-    contactRow.appendChild(addressInput);
-
-    var copySelect = document.createElement("select");
-    copySelect.className = "field address-copy-select";
-    copySelect.setAttribute("aria-label", "住所をコピー");
-    (function refreshCopyOptions(){
-      copySelect.innerHTML = "";
-      var first = document.createElement("option");
-      first.value = "";
-      first.textContent = "住所をコピー…";
-      copySelect.appendChild(first);
-      state.tiers.forEach(function(t){
-        t.people.forEach(function(other){
-          if(other === person || !other.name.trim() || !other.address) return;
-          var opt = document.createElement("option");
-          opt.value = other.id;
-          opt.textContent = other.name + (other.relation ? "(" + other.relation + ")" : "");
-          copySelect.appendChild(opt);
+      postalInput.addEventListener("blur", function(){
+        if(!editMode || person[addrKey]) return;
+        lookupAddressByPostal(postalInput.value, function(addr){
+          if(person[addrKey]) return;
+          person[addrKey] = addr;
+          addressInput.value = addr;
+          save();
         });
       });
-    })();
-    copySelect.addEventListener("change", function(){
-      if(!copySelect.value) return;
-      var src = null;
-      state.tiers.forEach(function(t){
-        t.people.forEach(function(other){ if(other.id === copySelect.value) src = other; });
-      });
-      if(src){
-        person.postalCode = src.postalCode;
-        person.address = src.address;
-        postalInput.value = person.postalCode;
-        addressInput.value = person.address;
+      group.appendChild(postalInput);
+
+      var addressInput = document.createElement("input");
+      addressInput.className = "field address-field";
+      addressInput.placeholder = label;
+      addressInput.value = person[addrKey];
+      addressInput.readOnly = !editMode;
+      addressInput.setAttribute("aria-label", label);
+      addressInput.addEventListener("input", function(){
+        person[addrKey] = addressInput.value;
         save();
+      });
+      group.appendChild(addressInput);
+
+      // 配偶者・親から住所をコピーするプルダウン(候補は開くたびに最新の状態で作り直す)
+      function buildCopySelect(relLabel, candidatesFn){
+        var sel = document.createElement("select");
+        sel.className = "field address-copy-select";
+        sel.setAttribute("aria-label", label + " " + relLabel);
+        function refresh(){
+          sel.innerHTML = "";
+          var first = document.createElement("option");
+          first.value = "";
+          first.textContent = relLabel + "…";
+          sel.appendChild(first);
+          candidatesFn(person).forEach(function(c){
+            if(!c || !c.name.trim() || !c[addrKey]) return;
+            var opt = document.createElement("option");
+            opt.value = c.id;
+            opt.textContent = c.name + (c.relation ? "(" + c.relation + ")" : "");
+            sel.appendChild(opt);
+          });
+        }
+        sel.addEventListener("mousedown", refresh);
+        sel.addEventListener("focus", refresh);
+        refresh();
+        sel.addEventListener("change", function(){
+          if(!sel.value) return;
+          var src = null;
+          state.tiers.forEach(function(t){
+            t.people.forEach(function(o){ if(o.id === sel.value) src = o; });
+          });
+          if(src){
+            person[postalKey] = src[postalKey];
+            person[addrKey] = src[addrKey];
+            postalInput.value = person[postalKey];
+            addressInput.value = person[addrKey];
+            save();
+          }
+          sel.value = "";
+        });
+        return sel;
       }
-      copySelect.value = "";
-    });
-    contactRow.appendChild(copySelect);
+      group.appendChild(buildCopySelect("配偶者からコピー", findSpouseCandidates));
+      group.appendChild(buildCopySelect("親からコピー", findParentCandidates));
+
+      return group;
+    }
+
+    contactRow.appendChild(buildAddressGroup("メイン住所", "postalCode", "address"));
+    contactRow.appendChild(buildAddressGroup("サブ住所", "postalCode2", "address2"));
 
     var landlineLabel = document.createElement("span");
     landlineLabel.className = "field-label";
@@ -1333,7 +1366,7 @@
     });
     contactRow.appendChild(mobileInput);
 
-    var hasContactInfo = person.postalCode || person.address || person.landline || person.mobile;
+    var hasContactInfo = person.postalCode || person.address || person.postalCode2 || person.address2 || person.landline || person.mobile;
     if(editMode || hasContactInfo) row.appendChild(contactRow);
 
     if(person.deceased){
@@ -1408,6 +1441,79 @@
     });
   }
 
+  // ---- 続柄から配偶者・親を推定する(住所コピー機能用) ----
+  function findTierKeyOf(person){
+    var found = null;
+    state.tiers.forEach(function(t){ if(t.people.indexOf(person) !== -1) found = t.key; });
+    return found;
+  }
+  function tierPeopleOf(key){
+    return tierByKey(key).people.filter(function(p){ return p.name.trim(); });
+  }
+  function personSelfSide(p){
+    return (/夫|主人/.test(p.relation) && !/妻|本人/.test(p.relation)) ? "husband" : "wife";
+  }
+  // 続柄の末尾の「父」「母」を入れ替えた文字列を返す(両親・子の配偶者の両親のペア判定に使う)
+  function swapParentWord(relation){
+    if(!relation) return null;
+    if(relation.slice(-1) === "父") return relation.slice(0, -1) + "母";
+    if(relation.slice(-1) === "母") return relation.slice(0, -1) + "父";
+    return null;
+  }
+  function findSpouseCandidates(person){
+    var tier = findTierKeyOf(person);
+    if(tier === "self"){
+      var self = tierByKey("self").people;
+      var other = self[0] === person ? self[1] : (self[1] === person ? self[0] : null);
+      return (other && other.name.trim()) ? [other] : [];
+    }
+    if(tier === "children"){
+      return tierPeopleOf("childrenSpouses").filter(function(s){ return person.relation && s.relation && s.relation.indexOf(person.relation) === 0; });
+    }
+    if(tier === "childrenSpouses"){
+      return tierPeopleOf("children").filter(function(c){ return c.relation && person.relation && person.relation.indexOf(c.relation) === 0; });
+    }
+    if(tier === "siblings"){
+      return tierPeopleOf("siblingsSpouses").filter(function(s){ return person.relation && s.relation && s.relation.indexOf(person.relation) === 0; });
+    }
+    if(tier === "siblingsSpouses"){
+      return tierPeopleOf("siblings").filter(function(s){ return s.relation && person.relation && person.relation.indexOf(s.relation) === 0; });
+    }
+    if(tier === "parents" || tier === "spouseParents"){
+      var alt = swapParentWord(person.relation);
+      if(!alt) return [];
+      return tierPeopleOf(tier).filter(function(o){ return o !== person && o.relation === alt; });
+    }
+    return [];
+  }
+  function findParentCandidates(person){
+    var tier = findTierKeyOf(person);
+    if(tier === "self"){
+      var prefix = personSelfSide(person) === "husband" ? "夫の" : "妻の";
+      return tierPeopleOf("parents").filter(function(p){ return p.relation && p.relation.indexOf(prefix) === 0; });
+    }
+    if(tier === "children"){
+      return tierPeopleOf("self");
+    }
+    if(tier === "childrenSpouses"){
+      return tierPeopleOf("spouseParents").filter(function(sp){ return person.relation && sp.relation && sp.relation.indexOf(person.relation) === 0; });
+    }
+    if(tier === "siblings"){
+      var prefix = person.relation && person.relation.indexOf("夫の") === 0 ? "夫の" : (person.relation && person.relation.indexOf("妻の") === 0 ? "妻の" : null);
+      if(!prefix) return [];
+      return tierPeopleOf("parents").filter(function(p){ return p.relation && p.relation.indexOf(prefix) === 0; });
+    }
+    if(tier === "grandchildren"){
+      var match = tierPeopleOf("children").filter(function(c){ return c.relation && person.relation && person.relation.indexOf(c.relation) === 0; })[0];
+      return match ? [match].concat(findSpouseCandidates(match)) : [];
+    }
+    if(tier === "niblings"){
+      var match = tierPeopleOf("siblings").filter(function(s){ return s.relation && person.relation && person.relation.indexOf(s.relation) === 0; })[0];
+      return match ? [match].concat(findSpouseCandidates(match)) : [];
+    }
+    return [];
+  }
+
   // ---- 連絡先一覧 ----
   function telHref(num){
     var digits = num.replace(/[^\d+]/g, "");
@@ -1439,7 +1545,7 @@
     state.tiers.forEach(function(tier){
       tier.people.forEach(function(p){
         if(!p.name.trim()) return;
-        if(!(p.postalCode || p.address || p.landline || p.mobile)) return;
+        if(!(p.postalCode || p.address || p.postalCode2 || p.address2 || p.landline || p.mobile)) return;
         people.push(p);
       });
     });
@@ -1456,13 +1562,32 @@
     table.className = "contact-table";
     var thead = document.createElement("thead");
     var headRow = document.createElement("tr");
-    ["氏名", "郵便番号", "住所", "固定電話", "携帯電話"].forEach(function(label){
+    ["氏名", "郵便番号(メイン)", "住所(メイン)", "郵便番号(サブ)", "住所(サブ)", "固定電話", "携帯電話"].forEach(function(label){
       var th = document.createElement("th");
       th.textContent = label;
       headRow.appendChild(th);
     });
     thead.appendChild(headRow);
     table.appendChild(thead);
+
+    function addAddressCells(tr, postal, address){
+      var postalTd = document.createElement("td");
+      postalTd.textContent = postal || "";
+      tr.appendChild(postalTd);
+
+      var addrTd = document.createElement("td");
+      addrTd.className = "c-address";
+      if(address){
+        var addrLink = document.createElement("a");
+        addrLink.className = "c-link";
+        addrLink.href = mapsHref(address);
+        addrLink.target = "_blank";
+        addrLink.rel = "noopener";
+        addrLink.textContent = address;
+        addrTd.appendChild(addrLink);
+      }
+      tr.appendChild(addrTd);
+    }
 
     var tbody = document.createElement("tbody");
     people.forEach(function(p){
@@ -1473,22 +1598,8 @@
       nameTd.textContent = p.name;
       tr.appendChild(nameTd);
 
-      var postalTd = document.createElement("td");
-      postalTd.textContent = p.postalCode || "";
-      tr.appendChild(postalTd);
-
-      var addrTd = document.createElement("td");
-      addrTd.className = "c-address";
-      if(p.address){
-        var addrLink = document.createElement("a");
-        addrLink.className = "c-link";
-        addrLink.href = mapsHref(p.address);
-        addrLink.target = "_blank";
-        addrLink.rel = "noopener";
-        addrLink.textContent = p.address;
-        addrTd.appendChild(addrLink);
-      }
-      tr.appendChild(addrTd);
+      addAddressCells(tr, p.postalCode, p.address);
+      addAddressCells(tr, p.postalCode2, p.address2);
 
       var landlineTd = document.createElement("td");
       if(p.landline){
