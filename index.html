@@ -472,7 +472,11 @@
   .contact-table th{ font-size: 12.5px; color: var(--ink-soft); font-weight: 600; background: var(--surface-2); position: sticky; top: 0; }
   .contact-table tr:last-child td{ border-bottom: none; }
   .contact-table td.c-name{ font-weight: 700; }
-  .contact-table td.c-address{ white-space: normal; min-width: 180px; }
+  .contact-table td.c-address{ white-space: normal; min-width: 200px; }
+  .c-address-line{ display: flex; align-items: baseline; gap: 6px; flex-wrap: wrap; }
+  .c-address-line + .c-address-line{ margin-top: 4px; padding-top: 4px; border-top: 1px dashed var(--line-soft); }
+  .c-address-label{ font-size: 11.5px; color: var(--ink-soft); white-space: nowrap; }
+  .c-postal{ font-size: 12.5px; color: var(--ink-soft); white-space: nowrap; }
   .contact-table a.c-link{ color: var(--accent); text-decoration: none; }
   .contact-table a.c-link:hover{ text-decoration: underline; }
   .contact-empty{ color: var(--ink-soft); padding: 16px; font-size: 14px; }
@@ -561,10 +565,9 @@
     <p class="lede">生年月日を入力すると、開いた時点の満年齢を自動計算して表示します。和暦・西暦のどちらからでも入力でき、両方を表示します。データはこの端末のブラウザ内だけに保存され、外部には送信されません。</p>
     <div class="toolbar">
       <button class="btn btn-primary" id="editToggle" type="button">編集する</button>
-      <button class="btn" id="westernOnlyToggle" type="button"></button>
-      <button class="btn" id="treeToggle" type="button">家系図を見る</button>
       <button class="btn" id="contactToggle" type="button">連絡先を見る</button>
       <button class="btn" id="birthdayToggle" type="button">誕生日を見る</button>
+      <button class="btn" id="treeToggle" type="button">家系図を見る</button>
       <button class="btn" id="exportBtn" type="button">バックアップを保存(JSON)</button>
       <button class="btn" id="importBtn" type="button">読み込む</button>
       <button class="btn btn-ghost" id="printBtn" type="button">印刷用に表示</button>
@@ -945,9 +948,6 @@
     renderTiers();
     document.getElementById("editToggle").textContent = editMode ? "編集を終える" : "編集する";
     document.body.classList.toggle("edit-mode", editMode);
-    var wBtn = document.getElementById("westernOnlyToggle");
-    wBtn.textContent = state.westernOnly ? "和暦も表示する" : "西暦のみ表示にする";
-    wBtn.classList.toggle("is-active", state.westernOnly);
   }
 
   function tierFilledCount(tier){
@@ -1600,7 +1600,7 @@
     table.className = "contact-table";
     var thead = document.createElement("thead");
     var headRow = document.createElement("tr");
-    ["氏名", "郵便番号(メイン)", "住所(メイン)", "郵便番号(サブ)", "住所(サブ)", "固定電話", "携帯電話"].forEach(function(label){
+    ["氏名", "住所", "固定電話", "携帯電話"].forEach(function(label){
       var th = document.createElement("th");
       th.textContent = label;
       headRow.appendChild(th);
@@ -1608,13 +1608,21 @@
     thead.appendChild(headRow);
     table.appendChild(thead);
 
-    function addAddressCells(tr, postal, address){
-      var postalTd = document.createElement("td");
-      postalTd.textContent = postal || "";
-      tr.appendChild(postalTd);
-
-      var addrTd = document.createElement("td");
-      addrTd.className = "c-address";
+    // メイン・サブの住所を1つのセルに縦に並べて表示する
+    function addAddressLine(container, label, postal, address){
+      if(!postal && !address) return;
+      var line = document.createElement("div");
+      line.className = "c-address-line";
+      var lineLabel = document.createElement("span");
+      lineLabel.className = "c-address-label";
+      lineLabel.textContent = label;
+      line.appendChild(lineLabel);
+      if(postal){
+        var postalSpan = document.createElement("span");
+        postalSpan.className = "c-postal";
+        postalSpan.textContent = postal;
+        line.appendChild(postalSpan);
+      }
       if(address){
         var addrLink = document.createElement("a");
         addrLink.className = "c-link";
@@ -1622,9 +1630,9 @@
         addrLink.target = "_blank";
         addrLink.rel = "noopener";
         addrLink.textContent = address;
-        addrTd.appendChild(addrLink);
+        line.appendChild(addrLink);
       }
-      tr.appendChild(addrTd);
+      container.appendChild(line);
     }
 
     var tbody = document.createElement("tbody");
@@ -1636,8 +1644,11 @@
       nameTd.textContent = p.name;
       tr.appendChild(nameTd);
 
-      addAddressCells(tr, p.postalCode, p.address);
-      addAddressCells(tr, p.postalCode2, p.address2);
+      var addrTd = document.createElement("td");
+      addrTd.className = "c-address";
+      addAddressLine(addrTd, "メイン", p.postalCode, p.address);
+      addAddressLine(addrTd, "サブ", p.postalCode2, p.address2);
+      tr.appendChild(addrTd);
 
       var landlineTd = document.createElement("td");
       if(p.landline){
@@ -2346,12 +2357,6 @@
   // ---- toolbar ----
   document.getElementById("editToggle").addEventListener("click", function(){
     editMode = !editMode;
-    render();
-  });
-
-  document.getElementById("westernOnlyToggle").addEventListener("click", function(){
-    state.westernOnly = !state.westernOnly;
-    save();
     render();
   });
 
