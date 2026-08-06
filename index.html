@@ -199,7 +199,15 @@
     border-bottom: 1px solid var(--line-soft);
   }
   .birthday-row:last-child{ border-bottom: none; }
-  .birthday-row.is-today{ background: var(--accent-soft); padding-top: 16px; padding-bottom: 16px; }
+  .birthday-row.is-today{
+    background: linear-gradient(135deg, #ffe3ec, #fff3d6 45%, #dff3ff);
+    padding-top: 16px;
+    padding-bottom: 16px;
+  }
+  @media (prefers-color-scheme: dark){
+    .birthday-row.is-today{ background: linear-gradient(135deg, #4a2b3a, #4a3f22 45%, #1f3a4a); }
+  }
+  :root[data-theme="dark"] .birthday-row.is-today{ background: linear-gradient(135deg, #4a2b3a, #4a3f22 45%, #1f3a4a); }
   .birthday-who{ display: flex; align-items: baseline; gap: 14px; flex-wrap: wrap; }
   .birthday-name{ font-size: 60px; font-weight: 700; }
   .birthday-date{ font-size: 44px; color: var(--ink-soft); font-variant-numeric: tabular-nums; }
@@ -209,11 +217,24 @@
   .birthday-celebrate{
     width: 100%;
     text-align: center;
-    font-size: 56px;
+    font-size: 44px;
     font-weight: 800;
     color: var(--celebrate);
-    padding: 6px 0 4px;
+    padding: 10px 8px;
     letter-spacing: 0.02em;
+    line-height: 1.5;
+  }
+  .birthday-celebrate .cake{
+    font-size: 68px;
+    display: inline-block;
+    animation: birthday-wobble 1.6s ease-in-out infinite;
+  }
+  @keyframes birthday-wobble{
+    0%, 100%{ transform: rotate(-6deg) scale(1); }
+    50%{ transform: rotate(6deg) scale(1.08); }
+  }
+  @media (prefers-reduced-motion: reduce){
+    .birthday-celebrate .cake{ animation: none; }
   }
 
   /* ---------- sections ---------- */
@@ -1605,7 +1626,10 @@
         if(e.isToday){
           var celebrate = document.createElement("div");
           celebrate.className = "birthday-celebrate";
-          celebrate.textContent = "🎂🎉 誕生日おめでとうございます！ 🎉🎂";
+          celebrate.innerHTML =
+            '<span class="cake">🎂</span><br>' +
+            "🎉🎈✨ 誕生日おめでとうございます！ ✨🎈🎉<br>" +
+            "🎊 " + e.displayAge + "歳、おめでとう！ 🎊";
           row.appendChild(celebrate);
         }
 
