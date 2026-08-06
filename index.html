@@ -260,9 +260,13 @@
   body:not(.edit-mode) .row-main .age-cell{
     flex-shrink: 0;
   }
-  body:not(.edit-mode) .row-main .date-inputs{
-    flex-wrap: nowrap;
-  }
+  /* プロフィール画面(閲覧時)は生年月日を編集用の入力欄ではなく短いテキストで表示し、幅を大きく節約する */
+  body:not(.edit-mode) .row-main .name-field{ min-width: 0; flex: 0 0 auto; }
+  body:not(.edit-mode) .row-main .relation-field{ min-width: 0; flex: 0 0 auto; }
+  body:not(.edit-mode) .row-main .date-field-group{ min-width: 0; flex: 0 0 auto; }
+  .date-view-text{ display: none; font-size: 16px; color: var(--ink); white-space: nowrap; padding: 6px 0; }
+  body:not(.edit-mode) .date-view-text{ display: inline; }
+  body:not(.edit-mode) .date-inputs{ display: none; }
 
   .field{
     background: transparent;
@@ -851,11 +855,24 @@
   }
 
   // ---- dual-calendar date field component: 西暦・和暦を同時表示し、どちらに入力してももう片方へ反映する ----
+  function formatDateViewText(iso){
+    var d = parseISO(iso);
+    if(!d) return "";
+    var s = d.getFullYear() + "年" + (d.getMonth() + 1) + "月" + d.getDate() + "日";
+    var era = eraFromDate(d);
+    if(era) s += "（" + ERA_META[era.key].label + era.year + "年）";
+    return s;
+  }
+
   function createDateField(getISO, setISO, opts){
     opts = opts || {};
 
     var wrap = document.createElement("div");
     wrap.className = "date-field-group";
+
+    var viewText = document.createElement("span");
+    viewText.className = "date-view-text";
+    wrap.appendChild(viewText);
 
     var inputsRow = document.createElement("div");
     inputsRow.className = "date-inputs";
@@ -946,10 +963,12 @@
       }else if(gy && source === "era"){
         yearWInput.value = gy;
       }
+      viewText.textContent = formatDateViewText(iso);
       if(opts.onChange) opts.onChange();
     }
 
     function setFromISO(iso){
+      viewText.textContent = formatDateViewText(iso);
       var d = parseISO(iso);
       if(!d){
         yearWInput.value = ""; monthInput.value = ""; dayInput.value = "";
@@ -1113,6 +1132,7 @@
     nameInput.placeholder = "氏名";
     nameInput.value = person.name;
     nameInput.readOnly = !editMode;
+    if(!editMode) nameInput.size = Math.max(2, Math.ceil(person.name.length * 1.8) + 1);
     nameInput.setAttribute("aria-label", "氏名");
     nameInput.addEventListener("input", function(){
       person.name = nameInput.value;
@@ -1138,6 +1158,7 @@
     relInput.placeholder = "続柄";
     relInput.value = person.relation;
     relInput.readOnly = !editMode;
+    if(!editMode) relInput.size = Math.max(2, Math.ceil(person.relation.length * 1.8) + 1);
     relInput.setAttribute("aria-label", "続柄");
     relInput.addEventListener("input", function(){
       person.relation = relInput.value;
