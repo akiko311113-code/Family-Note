@@ -236,6 +236,70 @@
   @media (prefers-reduced-motion: reduce){
     .birthday-celebrate .cake{ animation: none; }
   }
+  .birthday-send{
+    width: 100%;
+    display: flex;
+    justify-content: center;
+    gap: 14px;
+    flex-wrap: wrap;
+    padding-top: 4px;
+  }
+  .birthday-send-btn{
+    display: inline-block;
+    font-size: 22px;
+    font-weight: 700;
+    padding: 10px 20px;
+    border-radius: 999px;
+    text-decoration: none;
+    color: #fff;
+    background: #2e8b57;
+  }
+  .birthday-send-btn.is-line{ background: #06c755; }
+
+  .birthday-msg-settings{
+    margin-top: 24px;
+    padding: 20px;
+    background: var(--surface);
+    border: 1px solid var(--line-soft);
+    border-radius: 4px;
+  }
+  .birthday-msg-title{ font-size: 22px; font-weight: 700; margin: 0 0 10px; }
+  .birthday-msg-note{ font-size: 16px; color: var(--ink-soft); line-height: 1.7; margin: 0 0 16px; }
+  .birthday-msg-label{ display: block; font-size: 15px; color: var(--ink-soft); margin-bottom: 6px; }
+  .birthday-msg-textarea{
+    width: 100%;
+    box-sizing: border-box;
+    font-size: 18px;
+    font-family: var(--sans);
+    padding: 10px;
+    border: 1px solid var(--line);
+    border-radius: 4px;
+    background: var(--surface-2);
+    color: var(--ink);
+    resize: vertical;
+  }
+  .birthday-msg-time-row{ margin-top: 16px; }
+  .birthday-msg-time{
+    font-size: 18px;
+    padding: 8px 10px;
+    border: 1px solid var(--line);
+    border-radius: 4px;
+    background: var(--surface-2);
+    color: var(--ink);
+  }
+  .birthday-msg-targets{
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px 20px;
+    margin-top: 10px;
+  }
+  .birthday-msg-target{
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 17px;
+  }
+  .birthday-msg-empty{ color: var(--ink-soft); font-size: 16px; }
 
   /* ---------- sections ---------- */
   section.tier{
@@ -665,6 +729,26 @@
 
   <section id="birthdaySection" class="birthday-section" style="display:none;">
     <div id="birthdayList"></div>
+
+    <div class="birthday-msg-settings">
+      <h2 class="birthday-msg-title">誕生日メッセージの設定</h2>
+      <p class="birthday-msg-note">
+        このアプリはサーバーを持たないため、決まった時刻に操作なしで自動送信することはできません。
+        誕生日の方の欄にある「SMSで送る」「LINEで送る」ボタンを押すと、下のメッセージが入力された状態でSMS/LINEアプリが開きますので、
+        最後の送信だけご自身で行ってください。
+      </p>
+
+      <label class="birthday-msg-label" for="birthdayMsgTemplate">メッセージ内容（{name}=名前、{age}=年齢 に置き換わります）</label>
+      <textarea id="birthdayMsgTemplate" class="birthday-msg-textarea" rows="3"></textarea>
+
+      <div class="birthday-msg-time-row">
+        <label class="birthday-msg-label" for="birthdayMsgTime">送信の目安時刻（この時刻にアプリを開いた際の目安です）</label>
+        <input type="time" id="birthdayMsgTime" class="birthday-msg-time">
+      </div>
+
+      <h3 class="birthday-msg-title">送る人・送らない人</h3>
+      <div id="birthdayMsgTargets" class="birthday-msg-targets"></div>
+    </div>
   </section>
 
   <section id="treeSection" class="tree-section" style="display:none;">
@@ -706,7 +790,8 @@
     return {
       id: uid(), name: "", altName: "", relation: relation || "", birth: "",
       deceased: false, deathDate: "", step: false, hideInTree: false,
-      postalCode: "", address: "", postalCode2: "", address2: "", showAddress2: false, landline: "", mobile: ""
+      postalCode: "", address: "", postalCode2: "", address2: "", showAddress2: false, landline: "", mobile: "",
+      sendBirthdayMsg: true
     };
   }
 
@@ -759,6 +844,7 @@
     p.showAddress2 = !!p.showAddress2;
     p.landline = p.landline || "";
     p.mobile = p.mobile || "";
+    p.sendBirthdayMsg = p.sendBirthdayMsg === undefined ? true : !!p.sendBirthdayMsg;
     return p;
   }
 
@@ -770,6 +856,10 @@
     }catch(e){ parsed = null; }
     if(!parsed || !Array.isArray(parsed.tiers)) parsed = { tiers: defaultTiers() };
     parsed.westernOnly = !!parsed.westernOnly;
+    parsed.birthdayMsg = parsed.birthdayMsg || {};
+    parsed.birthdayMsg.template = parsed.birthdayMsg.template ||
+      "{name}さん、お誕生日おめでとうございます！{age}歳の新しい1年も、健康で幸せに過ごせますように。";
+    parsed.birthdayMsg.reminderTime = parsed.birthdayMsg.reminderTime || "09:00";
     parsed.tiers.forEach(function(tier){
       tier.people = (tier.people || []).map(normalizePerson);
     });
@@ -1570,6 +1660,7 @@
         var alreadyPassed = (month === curMonth && day < curDay);
         var age = calcAge(d, today);
         entries.push({
+          person: p,
           name: p.name, month: month, day: day,
           monthOrder: ((month - curMonth) + 12) % 12,
           isToday: isToday,
@@ -1631,6 +1722,23 @@
             "🎉🎈✨ 誕生日おめでとうございます！ ✨🎈🎉<br>" +
             "🎊 " + e.displayAge + "歳、おめでとう！ 🎊";
           row.appendChild(celebrate);
+
+          if(e.person.sendBirthdayMsg && e.person.mobile){
+            var msgText = fillBirthdayMsgTemplate(state.birthdayMsg.template, e.person.name, e.displayAge);
+            var sendWrap = document.createElement("div");
+            sendWrap.className = "birthday-send";
+            var smsBtn = document.createElement("a");
+            smsBtn.className = "birthday-send-btn";
+            smsBtn.href = smsHref(e.person.mobile, msgText);
+            smsBtn.textContent = "📱 SMSで送る";
+            sendWrap.appendChild(smsBtn);
+            var lineBtn = document.createElement("a");
+            lineBtn.className = "birthday-send-btn is-line";
+            lineBtn.href = lineHref(msgText);
+            lineBtn.textContent = "💬 LINEで送る";
+            sendWrap.appendChild(lineBtn);
+            row.appendChild(sendWrap);
+          }
         }
 
         var status = document.createElement("div");
@@ -1649,6 +1757,64 @@
       block.appendChild(rows);
       container.appendChild(block);
     }
+
+    renderBirthdayMsgSettings();
+  }
+
+  function renderBirthdayMsgSettings(){
+    var tpl = document.getElementById("birthdayMsgTemplate");
+    var time = document.getElementById("birthdayMsgTime");
+    if(document.activeElement !== tpl) tpl.value = state.birthdayMsg.template;
+    if(document.activeElement !== time) time.value = state.birthdayMsg.reminderTime;
+    if(!tpl.dataset.bound){
+      tpl.dataset.bound = "1";
+      tpl.addEventListener("input", function(){
+        state.birthdayMsg.template = tpl.value;
+        save();
+        renderBirthdayList();
+      });
+    }
+    if(!time.dataset.bound){
+      time.dataset.bound = "1";
+      time.addEventListener("input", function(){
+        state.birthdayMsg.reminderTime = time.value;
+        save();
+      });
+    }
+
+    var targets = document.getElementById("birthdayMsgTargets");
+    targets.innerHTML = "";
+    var people = [];
+    state.tiers.forEach(function(tier){
+      tier.people.forEach(function(p){
+        if(p.deceased || !p.name.trim()) return;
+        people.push(p);
+      });
+    });
+    if(!people.length){
+      var empty = document.createElement("p");
+      empty.className = "birthday-msg-empty";
+      empty.textContent = "登録されている方がいません。";
+      targets.appendChild(empty);
+      return;
+    }
+    people.forEach(function(p){
+      var label = document.createElement("label");
+      label.className = "birthday-msg-target";
+      var cb = document.createElement("input");
+      cb.type = "checkbox";
+      cb.checked = !!p.sendBirthdayMsg;
+      cb.addEventListener("change", function(){
+        p.sendBirthdayMsg = cb.checked;
+        save();
+        renderBirthdayList();
+      });
+      label.appendChild(cb);
+      var span = document.createElement("span");
+      span.textContent = p.name + (p.mobile ? "" : "（携帯電話番号未登録）");
+      label.appendChild(span);
+      targets.appendChild(label);
+    });
   }
 
   function escapeHtml(s){
@@ -1737,6 +1903,19 @@
   }
   function mapsHref(address){
     return "https://www.google.com/maps/search/?api=1&query=" + encodeURIComponent(address);
+  }
+  function smsHref(num, body){
+    var digits = num.replace(/[^\d+]/g, "");
+    if(!digits) return "";
+    return "sms:" + digits + "?body=" + encodeURIComponent(body);
+  }
+  function lineHref(body){
+    return "line://msg/text/" + encodeURIComponent(body);
+  }
+  function fillBirthdayMsgTemplate(template, name, age){
+    return String(template || "")
+      .split("{name}").join(name)
+      .split("{age}").join(String(age));
   }
   // 一覧画面の入力欄の横に置く小さなリンク(地図・電話)。値がない間は無効化しておき、
   // 入力されるたびに呼び出し側からrefresh()してhrefを最新に保つ。
