@@ -255,8 +255,13 @@
     overflow-x: auto;
   }
   body:not(.edit-mode) .row-main .name-field,
-  body:not(.edit-mode) .row-main .relation-field{
+  body:not(.edit-mode) .row-main .relation-field,
+  body:not(.edit-mode) .row-main .date-field-group,
+  body:not(.edit-mode) .row-main .age-cell{
     flex-shrink: 0;
+  }
+  body:not(.edit-mode) .row-main .date-inputs{
+    flex-wrap: nowrap;
   }
 
   .field{
