@@ -288,17 +288,23 @@
     color: var(--ink);
   }
   .birthday-msg-targets{
-    display: flex;
-    flex-wrap: wrap;
-    gap: 10px 20px;
     margin-top: 10px;
+    overflow-x: auto;
+    background: var(--surface-2);
+    border: 1px solid var(--line-soft);
+    border-radius: 8px;
   }
-  .birthday-msg-target{
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    font-size: 17px;
+  .birthday-msg-table{ width: 100%; border-collapse: collapse; font-size: 16px; }
+  .birthday-msg-table th, .birthday-msg-table td{
+    padding: 10px 14px;
+    text-align: left;
+    border-bottom: 1px solid var(--line-soft);
   }
+  .birthday-msg-table th{ font-size: 13px; color: var(--ink-soft); font-weight: 600; }
+  .birthday-msg-table tr:last-child td{ border-bottom: none; }
+  .birthday-msg-rel{ color: var(--ink-soft); font-size: 14px; }
+  .birthday-msg-cb-cell{ text-align: center; }
+  .birthday-msg-cb-cell input[type="checkbox"]{ width: 20px; height: 20px; }
   .birthday-msg-empty{ color: var(--ink-soft); font-size: 16px; }
 
   /* ---------- sections ---------- */
@@ -1822,23 +1828,49 @@
       targets.appendChild(empty);
       return;
     }
+    var table = document.createElement("table");
+    table.className = "birthday-msg-table";
+    var thead = document.createElement("thead");
+    var headRow = document.createElement("tr");
+    ["氏名", "続柄", "送る"].forEach(function(label){
+      var th = document.createElement("th");
+      th.textContent = label;
+      headRow.appendChild(th);
+    });
+    thead.appendChild(headRow);
+    table.appendChild(thead);
+
+    var tbody = document.createElement("tbody");
     people.forEach(function(p){
-      var label = document.createElement("label");
-      label.className = "birthday-msg-target";
+      var tr = document.createElement("tr");
+
+      var nameTd = document.createElement("td");
+      nameTd.textContent = p.name;
+      tr.appendChild(nameTd);
+
+      var relTd = document.createElement("td");
+      relTd.className = "birthday-msg-rel";
+      relTd.textContent = p.relation + (p.mobile ? "" : "（携帯電話番号未登録）");
+      tr.appendChild(relTd);
+
+      var cbTd = document.createElement("td");
+      cbTd.className = "birthday-msg-cb-cell";
       var cb = document.createElement("input");
       cb.type = "checkbox";
+      cb.setAttribute("aria-label", p.name + "にお祝いメッセージを送る");
       cb.checked = !!p.sendBirthdayMsg;
       cb.addEventListener("change", function(){
         p.sendBirthdayMsg = cb.checked;
         save();
         renderBirthdayList();
       });
-      label.appendChild(cb);
-      var span = document.createElement("span");
-      span.textContent = p.name + (p.mobile ? "" : "（携帯電話番号未登録）");
-      label.appendChild(span);
-      targets.appendChild(label);
+      cbTd.appendChild(cb);
+      tr.appendChild(cbTd);
+
+      tbody.appendChild(tr);
     });
+    table.appendChild(tbody);
+    targets.appendChild(table);
   }
 
   function escapeHtml(s){
