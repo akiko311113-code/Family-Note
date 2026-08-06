@@ -639,7 +639,7 @@
     return {
       id: uid(), name: "", altName: "", relation: relation || "", birth: "",
       deceased: false, deathDate: "", step: false, hideInTree: false,
-      postalCode: "", address: "", postalCode2: "", address2: "", landline: "", mobile: ""
+      postalCode: "", address: "", postalCode2: "", address2: "", showAddress2: false, landline: "", mobile: ""
     };
   }
 
@@ -689,6 +689,7 @@
     p.address = p.address || "";
     p.postalCode2 = p.postalCode2 || "";
     p.address2 = p.address2 || "";
+    p.showAddress2 = !!p.showAddress2;
     p.landline = p.landline || "";
     p.mobile = p.mobile || "";
     return p;
@@ -1348,7 +1349,26 @@
     }
 
     contactRow.appendChild(buildAddressGroup("住所", "postalCode", "address"));
-    contactRow.appendChild(buildAddressGroup("住所②", "postalCode2", "address2"));
+
+    var address2Group = buildAddressGroup("住所②", "postalCode2", "address2");
+    var showAddress2 = person.showAddress2 || !!(person.postalCode2 || person.address2);
+    address2Group.style.display = showAddress2 ? "" : "none";
+
+    var address2Label = document.createElement("label");
+    address2Label.className = "deceased-checkbox";
+    var address2Cb = document.createElement("input");
+    address2Cb.type = "checkbox";
+    address2Cb.checked = showAddress2;
+    address2Cb.addEventListener("change", function(){
+      person.showAddress2 = address2Cb.checked;
+      address2Group.style.display = address2Cb.checked ? "" : "none";
+      save();
+    });
+    address2Label.appendChild(address2Cb);
+    address2Label.appendChild(document.createTextNode("住所②を入力する"));
+    contactRow.appendChild(address2Label);
+
+    contactRow.appendChild(address2Group);
 
     var landlineLabel = document.createElement("span");
     landlineLabel.className = "field-label";
