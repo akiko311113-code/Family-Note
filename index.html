@@ -167,50 +167,41 @@
     font-variant-numeric: tabular-nums;
   }
 
-  /* ---------- summary strip ---------- */
-  .summary{
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-    gap: 1px;
-    background: var(--line-soft);
+  /* ---------- birthday list ---------- */
+  .birthday-section{ margin-bottom: 30px; }
+  .birthday-month{
+    margin-bottom: 22px;
+    background: var(--surface);
     border: 1px solid var(--line-soft);
     border-radius: 4px;
     overflow: hidden;
-    margin-bottom: 32px;
   }
-  .summary-cell{
-    background: var(--surface);
-    padding: 14px 18px;
-  }
-  .summary-cell .label{
-    font-size: 14px;
-    color: var(--ink-soft);
-    letter-spacing: 0.06em;
-    font-weight: 600;
-  }
-  .summary-cell .value{
+  .birthday-month-head{
+    padding: 12px 20px;
+    border-bottom: 1px solid var(--line-soft);
     font-family: var(--sans);
+    font-size: 19px;
     font-weight: 700;
-    font-size: 27px;
-    margin-top: 4px;
-    font-variant-numeric: tabular-nums;
+    letter-spacing: 0.03em;
   }
-  .summary-cell .value small{
-    font-family: var(--sans);
-    font-size: 15px;
-    color: var(--ink-soft);
-    margin-left: 6px;
-  }
-  .upcoming-empty{ color: var(--ink-soft); font-size: 16px; }
-  .upcoming-list{ display: flex; flex-direction: column; gap: 3px; }
-  .upcoming-item{
+  .birthday-rows{ display: flex; flex-direction: column; }
+  .birthday-row{
     display: flex;
+    align-items: baseline;
     justify-content: space-between;
-    gap: 10px;
-    font-size: 16px;
+    gap: 12px;
+    flex-wrap: wrap;
+    padding: 12px 20px;
+    border-bottom: 1px solid var(--line-soft);
   }
-  .upcoming-item .who{ color: var(--ink); }
-  .upcoming-item .when{ color: var(--ink-soft); font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .birthday-row:last-child{ border-bottom: none; }
+  .birthday-row.is-today{ background: var(--accent-soft); }
+  .birthday-who{ display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
+  .birthday-name{ font-size: 18px; font-weight: 700; }
+  .birthday-date{ font-size: 14px; color: var(--ink-soft); font-variant-numeric: tabular-nums; }
+  .birthday-status{ font-size: 15px; color: var(--ink-soft); font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .birthday-status .days{ color: var(--accent-ink); font-weight: 700; }
+  .birthday-empty{ color: var(--ink-soft); font-size: 15px; padding: 16px 20px; }
 
   /* ---------- sections ---------- */
   section.tier{
@@ -573,6 +564,7 @@
       <button class="btn" id="westernOnlyToggle" type="button"></button>
       <button class="btn" id="treeToggle" type="button">家系図を見る</button>
       <button class="btn" id="contactToggle" type="button">連絡先を見る</button>
+      <button class="btn" id="birthdayToggle" type="button">誕生日を見る</button>
       <button class="btn" id="exportBtn" type="button">バックアップを保存(JSON)</button>
       <button class="btn" id="importBtn" type="button">読み込む</button>
       <button class="btn btn-ghost" id="printBtn" type="button">印刷用に表示</button>
@@ -583,9 +575,11 @@
     <p class="print-hint" id="printHint" style="display:none;">この見た目のまま、キーボードの Ctrl+P (Macは ⌘+P) を押すと印刷できます。印刷ダイアログが自動で開かない場合も、この操作でお試しください。</p>
   </header>
 
-  <div class="summary" id="summary"></div>
-
   <main id="tiers"></main>
+
+  <section id="birthdaySection" class="birthday-section" style="display:none;">
+    <div id="birthdayList"></div>
+  </section>
 
   <section id="treeSection" class="tree-section" style="display:none;">
     <div class="tree-toolbar">
@@ -949,7 +943,6 @@
   // ---- rendering ----
   function render(){
     renderTiers();
-    renderSummary();
     document.getElementById("editToggle").textContent = editMode ? "編集を終える" : "編集する";
     document.body.classList.toggle("edit-mode", editMode);
     var wBtn = document.getElementById("westernOnlyToggle");
@@ -1114,7 +1107,7 @@
 
     var birthField = createDateField(
       function(){ return person.birth; },
-      function(v){ person.birth = v; save(); refreshAgeCell(ageCell, person); renderSummary(); },
+      function(v){ person.birth = v; save(); refreshAgeCell(ageCell, person); },
       { westernOnly: function(){ return !!state.westernOnly; } }
     );
     birthField.setReadOnly(!editMode);
@@ -1378,7 +1371,7 @@
       deathLine.appendChild(dLbl);
       var deathField = createDateField(
         function(){ return person.deathDate; },
-        function(v){ person.deathDate = v; save(); refreshAgeCell(ageCell, person); renderSummary(); },
+        function(v){ person.deathDate = v; save(); refreshAgeCell(ageCell, person); },
         { westernOnly: function(){ return !!state.westernOnly; } }
       );
       deathField.setReadOnly(!editMode);
@@ -1389,50 +1382,95 @@
     return row;
   }
 
-  function renderSummary(){
+  // 今月から始めて来月以降を12か月分、月ごとにまとめて誕生日を表示する
+  function renderBirthdayList(){
+    var container = document.getElementById("birthdayList");
+    container.innerHTML = "";
     var today = todayMidnight();
-    var all = [];
+    var curMonth = today.getMonth() + 1;
+    var curDay = today.getDate();
+
+    var entries = [];
     state.tiers.forEach(function(tier){
       tier.people.forEach(function(p){
-        if(p.deceased) return;
+        if(p.deceased || !p.name.trim()) return;
         var d = parseISO(p.birth);
-        if(d && p.name.trim()){
-          all.push({ name: p.name, age: calcAge(d, today), days: daysToNextBirthday(d, today), monthDay: (d.getMonth() + 1) + "月" + d.getDate() + "日" });
-        }
+        if(!d) return;
+        var month = d.getMonth() + 1;
+        var day = d.getDate();
+        var isToday = (month === curMonth && day === curDay);
+        var alreadyPassed = (month === curMonth && day < curDay);
+        var age = calcAge(d, today);
+        entries.push({
+          name: p.name, month: month, day: day,
+          monthOrder: ((month - curMonth) + 12) % 12,
+          isToday: isToday,
+          alreadyPassed: alreadyPassed,
+          displayAge: alreadyPassed || isToday ? age : age + 1,
+          days: (alreadyPassed || isToday) ? null : daysToNextBirthday(d, today)
+        });
       });
     });
 
-    var el = document.getElementById("summary");
-    el.innerHTML = "";
-
-    var totalCell = document.createElement("div");
-    totalCell.className = "summary-cell";
-    totalCell.innerHTML = '<div class="label">登録人数(存命)</div><div class="value">' + all.length + '<small>名</small></div>';
-    el.appendChild(totalCell);
-
-    var oldest = all.slice().sort(function(a,b){ return b.age - a.age; })[0];
-    var youngest = all.slice().sort(function(a,b){ return a.age - b.age; })[0];
-    var ageCell = document.createElement("div");
-    ageCell.className = "summary-cell";
-    ageCell.innerHTML =
-      '<div class="label">最年長</div><div class="value">' + (oldest ? oldest.age + '<small>歳・' + escapeHtml(oldest.name) + '</small>' : '—') + '</div>' +
-      '<div class="label" style="margin-top:8px;">最年少</div><div class="value">' + (youngest ? youngest.age + '<small>歳・' + escapeHtml(youngest.name) + '</small>' : '—') + '</div>';
-    el.appendChild(ageCell);
-
-    var upcoming = all.slice().sort(function(a,b){ return a.days - b.days; }).slice(0, 3);
-    var upCell = document.createElement("div");
-    upCell.className = "summary-cell";
-    var upHtml = '<div class="label">もうすぐ誕生日</div>';
-    if(upcoming.length === 0){
-      upHtml += '<div class="upcoming-empty">登録がありません</div>';
-    }else{
-      upHtml += '<div class="upcoming-list">' + upcoming.map(function(p){
-        var when = p.days === 0 ? "本日" : (p.days + "日後");
-        return '<div class="upcoming-item"><span class="who">' + escapeHtml(p.name) + '</span><span class="when">' + when + '(' + p.monthDay + ')</span></div>';
-      }).join("") + '</div>';
+    if(!entries.length){
+      var empty = document.createElement("p");
+      empty.className = "birthday-empty";
+      empty.textContent = "生年月日が入力されている方がいません。";
+      container.appendChild(empty);
+      return;
     }
-    upCell.innerHTML = upHtml;
-    el.appendChild(upCell);
+
+    entries.sort(function(a, b){
+      if(a.monthOrder !== b.monthOrder) return a.monthOrder - b.monthOrder;
+      return a.day - b.day;
+    });
+
+    for(var m = 0; m < 12; m++){
+      var monthEntries = entries.filter(function(e){ return e.monthOrder === m; });
+      if(!monthEntries.length) continue;
+      var monthNum = ((curMonth - 1 + m) % 12) + 1;
+
+      var block = document.createElement("div");
+      block.className = "birthday-month";
+      var head = document.createElement("div");
+      head.className = "birthday-month-head";
+      head.textContent = monthNum + "月";
+      block.appendChild(head);
+
+      var rows = document.createElement("div");
+      rows.className = "birthday-rows";
+      monthEntries.forEach(function(e){
+        var row = document.createElement("div");
+        row.className = "birthday-row" + (e.isToday ? " is-today" : "");
+
+        var who = document.createElement("div");
+        who.className = "birthday-who";
+        var nameEl = document.createElement("span");
+        nameEl.className = "birthday-name";
+        nameEl.textContent = e.name;
+        who.appendChild(nameEl);
+        var dateEl = document.createElement("span");
+        dateEl.className = "birthday-date";
+        dateEl.textContent = e.month + "月" + e.day + "日";
+        who.appendChild(dateEl);
+        row.appendChild(who);
+
+        var status = document.createElement("div");
+        status.className = "birthday-status";
+        if(e.isToday){
+          status.innerHTML = '<span class="days">本日誕生日</span>・' + e.displayAge + "歳になりました";
+        }else if(e.alreadyPassed){
+          status.textContent = e.displayAge + "歳になりました";
+        }else{
+          status.innerHTML = '誕生日まであと<span class="days">' + e.days + "日</span>・" + e.displayAge + "歳になります";
+        }
+        row.appendChild(status);
+
+        rows.appendChild(row);
+      });
+      block.appendChild(rows);
+      container.appendChild(block);
+    }
   }
 
   function escapeHtml(s){
@@ -2245,7 +2283,7 @@
       if(pHint) pHint.style.display = "none";
     }
 
-    if(treeVisible) fitTreeOnScreen();
+    if(activeView === "tree") fitTreeOnScreen();
   });
 
   // 画面の横幅に収まらない場合、線のつながりを保ったまま自動的に縮小して1画面に収める
@@ -2266,45 +2304,41 @@
     }
   }
 
-  var treeVisible = false;
-  var contactVisible = false;
-  document.getElementById("treeToggle").addEventListener("click", function(){
-    treeVisible = !treeVisible;
-    if(treeVisible && contactVisible){
-      contactVisible = false;
-      document.getElementById("contactSection").style.display = "none";
-      document.getElementById("contactToggle").textContent = "連絡先を見る";
-    }
-    document.getElementById("treeSection").style.display = treeVisible ? "block" : "none";
-    document.getElementById("summary").style.display = (treeVisible || contactVisible) ? "none" : "";
-    document.getElementById("tiers").style.display = (treeVisible || contactVisible) ? "none" : "";
-    document.getElementById("treeToggle").textContent = treeVisible ? "一覧に戻る" : "家系図を見る";
-    if(treeVisible){
+  // 一覧・家系図・連絡先・誕生日は同時に1つだけ表示する
+  var activeView = "list";
+  var VIEW_DEFS = {
+    tree: { section: "treeSection", toggle: "treeToggle", label: "家系図を見る" },
+    contact: { section: "contactSection", toggle: "contactToggle", label: "連絡先を見る" },
+    birthday: { section: "birthdaySection", toggle: "birthdayToggle", label: "誕生日を見る" }
+  };
+  function setActiveView(view){
+    activeView = (activeView === view) ? "list" : view;
+    document.getElementById("tiers").style.display = (activeView === "list") ? "" : "none";
+    Object.keys(VIEW_DEFS).forEach(function(key){
+      var def = VIEW_DEFS[key];
+      var isActive = (activeView === key);
+      document.getElementById(def.section).style.display = isActive ? "block" : "none";
+      document.getElementById(def.toggle).textContent = isActive ? "一覧に戻る" : def.label;
+    });
+    if(activeView === "tree"){
       var holder = document.getElementById("treeInner");
       holder.innerHTML = "";
       var tree = buildFamilyTree();
       holder.appendChild(tree.el);
       tree.finalize();
       fitTreeOnScreen();
+    }else if(activeView === "contact"){
+      renderContactTable();
+    }else if(activeView === "birthday"){
+      renderBirthdayList();
     }
-  });
-
-  document.getElementById("contactToggle").addEventListener("click", function(){
-    contactVisible = !contactVisible;
-    if(contactVisible && treeVisible){
-      treeVisible = false;
-      document.getElementById("treeSection").style.display = "none";
-      document.getElementById("treeToggle").textContent = "家系図を見る";
-    }
-    document.getElementById("contactSection").style.display = contactVisible ? "block" : "none";
-    document.getElementById("summary").style.display = (treeVisible || contactVisible) ? "none" : "";
-    document.getElementById("tiers").style.display = (treeVisible || contactVisible) ? "none" : "";
-    document.getElementById("contactToggle").textContent = contactVisible ? "一覧に戻る" : "連絡先を見る";
-    if(contactVisible) renderContactTable();
-  });
+  }
+  document.getElementById("treeToggle").addEventListener("click", function(){ setActiveView("tree"); });
+  document.getElementById("contactToggle").addEventListener("click", function(){ setActiveView("contact"); });
+  document.getElementById("birthdayToggle").addEventListener("click", function(){ setActiveView("birthday"); });
 
   window.addEventListener("resize", function(){
-    if(treeVisible) fitTreeOnScreen();
+    if(activeView === "tree") fitTreeOnScreen();
   });
 
   document.getElementById("treePrintBtn").addEventListener("click", printFamilyTree);
