@@ -734,8 +734,9 @@
       <h2 class="birthday-msg-title">誕生日メッセージの設定</h2>
       <p class="birthday-msg-note">
         このアプリはサーバーを持たないため、決まった時刻に操作なしで自動送信することはできません。
-        誕生日の方の欄にある「SMSで送る」「LINEで送る」ボタンを押すと、下のメッセージが入力された状態でSMS/LINEアプリが開きますので、
-        最後の送信だけご自身で行ってください。
+        誕生日の方の欄にある「SMSで送る」ボタンを押すと、その方の携帯電話宛にメッセージが入力された状態でSMSアプリが開きます。
+        「LINEで送る」ボタンを押すと、メッセージが入力された状態でLINEアプリが開きますが、LINEの仕組み上、送り先（お相手）はLINEの画面でご自身で選ぶ必要があります。
+        いずれも、最後の送信だけご自身で行ってください。
       </p>
 
       <label class="birthday-msg-label" for="birthdayMsgTemplate">メッセージ内容（{name}=名前、{age}=年齢 に置き換わります）</label>
@@ -1740,6 +1741,8 @@
             var lineBtn = document.createElement("a");
             lineBtn.className = "birthday-send-btn is-line";
             lineBtn.href = lineHref(msgText);
+            lineBtn.target = "_blank";
+            lineBtn.rel = "noopener";
             lineBtn.textContent = "💬 LINEで送る";
             sendWrap.appendChild(lineBtn);
             row.appendChild(sendWrap);
@@ -1915,7 +1918,7 @@
     return "sms:" + digits + "?body=" + encodeURIComponent(body);
   }
   function lineHref(body){
-    return "line://msg/text/" + encodeURIComponent(body);
+    return "https://line.me/R/msg/text/?" + encodeURIComponent(body);
   }
   function fillBirthdayMsgTemplate(template, name, age){
     return String(template || "")
