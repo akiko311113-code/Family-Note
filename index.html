@@ -254,19 +254,22 @@
     flex-wrap: nowrap;
     overflow-x: auto;
   }
-  body:not(.edit-mode) .row-main .name-field,
-  body:not(.edit-mode) .row-main .relation-field,
   body:not(.edit-mode) .row-main .date-field-group,
   body:not(.edit-mode) .row-main .age-cell{
     flex-shrink: 0;
   }
-  /* プロフィール画面(閲覧時)は生年月日を編集用の入力欄ではなく短いテキストで表示し、幅を大きく節約する */
-  body:not(.edit-mode) .row-main .name-field{ min-width: 0; flex: 0 0 auto; }
-  body:not(.edit-mode) .row-main .relation-field{ min-width: 0; flex: 0 0 auto; }
+  /* プロフィール画面(閲覧時)は、名前・続柄・生年月日を編集用の入力欄ではなく実際の文字数ぴったりのテキストで表示し、幅を大きく節約する */
   body:not(.edit-mode) .row-main .date-field-group{ min-width: 0; flex: 0 0 auto; }
   .date-view-text{ display: none; font-size: 16px; color: var(--ink); white-space: nowrap; padding: 6px 0; }
   body:not(.edit-mode) .date-view-text{ display: inline; }
   body:not(.edit-mode) .date-inputs{ display: none; }
+
+  .name-view-text, .relation-view-text{ display: none; white-space: nowrap; }
+  body:not(.edit-mode) .name-view-text, body:not(.edit-mode) .relation-view-text{ display: inline; }
+  body:not(.edit-mode) input.name-field, body:not(.edit-mode) input.relation-field{ display: none; }
+  .name-view-text{ font-size: 19px; font-weight: 600; padding: 6px 0; }
+  .row.is-step .name-view-text{ color: var(--ink-soft); font-weight: 400; }
+  .relation-view-text{ color: var(--ink-soft); font-size: 16px; padding: 6px 0; }
 
   .field{
     background: transparent;
@@ -431,8 +434,8 @@
   .address-field{ flex: 1 1 380px; min-width: 220px; }
   .address-field-full{ flex: 1 1 auto; min-width: 200px; }
   .phone-field{ flex: 0 1 150px; min-width: 110px; }
-  .phone-group{ display: flex; align-items: center; gap: 8px; flex-wrap: wrap; width: 100%; }
-  .phone-group > :nth-child(4){ margin-left: 18px; }
+  .phone-group{ display: flex; flex-direction: column; gap: 6px; width: 100%; }
+  .phone-line{ display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
   .address-copy-select{
     display: none;
     font-size: 13px;
@@ -1132,14 +1135,19 @@
     nameInput.placeholder = "氏名";
     nameInput.value = person.name;
     nameInput.readOnly = !editMode;
-    if(!editMode) nameInput.size = Math.max(2, Math.ceil(person.name.length * 1.8) + 1);
     nameInput.setAttribute("aria-label", "氏名");
     nameInput.addEventListener("input", function(){
       person.name = nameInput.value;
       save();
       tierCountEl.textContent = tierFilledCount(tier) + "名";
+      nameViewText.textContent = nameInput.value;
     });
     mainLine.appendChild(nameInput);
+
+    var nameViewText = document.createElement("span");
+    nameViewText.className = "name-view-text";
+    nameViewText.textContent = person.name;
+    mainLine.appendChild(nameViewText);
 
     var altNameInput = document.createElement("input");
     altNameInput.className = "field alt-name-field" + (editMode ? "" : " is-secondary-view");
@@ -1158,13 +1166,18 @@
     relInput.placeholder = "続柄";
     relInput.value = person.relation;
     relInput.readOnly = !editMode;
-    if(!editMode) relInput.size = Math.max(2, Math.ceil(person.relation.length * 1.8) + 1);
     relInput.setAttribute("aria-label", "続柄");
     relInput.addEventListener("input", function(){
       person.relation = relInput.value;
       save();
+      relViewText.textContent = relInput.value;
     });
     mainLine.appendChild(relInput);
+
+    var relViewText = document.createElement("span");
+    relViewText.className = "relation-view-text";
+    relViewText.textContent = person.relation;
+    mainLine.appendChild(relViewText);
 
     var ageCell = document.createElement("div");
     ageCell.className = "age-cell";
@@ -1430,10 +1443,12 @@
     var phoneGroup = document.createElement("div");
     phoneGroup.className = "phone-group";
 
+    var landlineLine = document.createElement("div");
+    landlineLine.className = "phone-line";
     var landlineLabel = document.createElement("span");
     landlineLabel.className = "field-label";
     landlineLabel.textContent = "固定電話";
-    phoneGroup.appendChild(landlineLabel);
+    landlineLine.appendChild(landlineLabel);
     var landlineInput = document.createElement("input");
     landlineInput.className = "field phone-field";
     landlineInput.placeholder = "固定電話";
@@ -1445,16 +1460,19 @@
       save();
       landlineCallLink.refresh();
     });
-    phoneGroup.appendChild(landlineInput);
+    landlineLine.appendChild(landlineInput);
     var landlineCallLink = buildQuickLink("📞", "固定電話に発信", false, function(){
       return person.landline ? telHref(person.landline) : "";
     });
-    phoneGroup.appendChild(landlineCallLink.el);
+    landlineLine.appendChild(landlineCallLink.el);
+    phoneGroup.appendChild(landlineLine);
 
+    var mobileLine = document.createElement("div");
+    mobileLine.className = "phone-line";
     var mobileLabel = document.createElement("span");
     mobileLabel.className = "field-label";
     mobileLabel.textContent = "携帯電話";
-    phoneGroup.appendChild(mobileLabel);
+    mobileLine.appendChild(mobileLabel);
     var mobileInput = document.createElement("input");
     mobileInput.className = "field phone-field";
     mobileInput.placeholder = "携帯電話";
@@ -1466,11 +1484,12 @@
       save();
       mobileCallLink.refresh();
     });
-    phoneGroup.appendChild(mobileInput);
+    mobileLine.appendChild(mobileInput);
     var mobileCallLink = buildQuickLink("📞", "携帯電話に発信", false, function(){
       return person.mobile ? telHref(person.mobile) : "";
     });
-    phoneGroup.appendChild(mobileCallLink.el);
+    mobileLine.appendChild(mobileCallLink.el);
+    phoneGroup.appendChild(mobileLine);
 
     contactRow.appendChild(phoneGroup);
 
