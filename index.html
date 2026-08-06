@@ -249,6 +249,15 @@
     gap: 12px;
     flex-wrap: wrap;
   }
+  /* プロフィール画面(閲覧時)は、名前〜年齢までを1行に収める。入りきらない場合のみ横スクロール */
+  body:not(.edit-mode) .row-main{
+    flex-wrap: nowrap;
+    overflow-x: auto;
+  }
+  body:not(.edit-mode) .row-main .name-field,
+  body:not(.edit-mode) .row-main .relation-field{
+    flex-shrink: 0;
+  }
 
   .field{
     background: transparent;
@@ -403,7 +412,7 @@
     background: var(--surface-2);
   }
   .address-group-row{ display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
-  .address-group.is-secondary-view{ padding: 2px 4px; background: transparent; opacity: 0.7; width: auto; }
+  .address-group.is-secondary-view{ padding: 2px 4px; background: transparent; opacity: 0.7; width: 100%; }
   .address-group.is-secondary-view .field{ font-size: 12px; border-color: transparent; background: transparent; padding: 2px 4px; }
   .address-group.is-secondary-view .postal-field{ min-width: 60px; }
   .address-group.is-secondary-view .address-field-full{ min-width: 120px; }
@@ -413,7 +422,7 @@
   .address-field{ flex: 1 1 380px; min-width: 220px; }
   .address-field-full{ flex: 1 1 auto; min-width: 200px; }
   .phone-field{ flex: 0 1 150px; min-width: 110px; }
-  .phone-group{ display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  .phone-group{ display: flex; align-items: center; gap: 8px; flex-wrap: wrap; width: 100%; }
   .address-copy-select{
     display: none;
     font-size: 13px;
