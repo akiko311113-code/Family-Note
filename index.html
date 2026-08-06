@@ -413,6 +413,7 @@
   .address-field{ flex: 1 1 380px; min-width: 220px; }
   .address-field-full{ flex: 1 1 auto; min-width: 200px; }
   .phone-field{ flex: 0 1 150px; min-width: 110px; }
+  .phone-group{ display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
   .address-copy-select{
     display: none;
     font-size: 13px;
@@ -1360,8 +1361,8 @@
         });
         return sel;
       }
-      row2.appendChild(buildCopySelect("配偶者からコピー", findSpouseCandidates));
       row2.appendChild(buildCopySelect("親からコピー", findParentCandidates));
+      row2.appendChild(buildCopySelect("配偶者からコピー", findSpouseCandidates));
       group.appendChild(row2);
 
       return group;
@@ -1390,10 +1391,13 @@
 
     contactRow.appendChild(address2Group);
 
+    var phoneGroup = document.createElement("div");
+    phoneGroup.className = "phone-group";
+
     var landlineLabel = document.createElement("span");
     landlineLabel.className = "field-label";
     landlineLabel.textContent = "固定電話";
-    contactRow.appendChild(landlineLabel);
+    phoneGroup.appendChild(landlineLabel);
     var landlineInput = document.createElement("input");
     landlineInput.className = "field phone-field";
     landlineInput.placeholder = "固定電話";
@@ -1405,16 +1409,16 @@
       save();
       landlineCallLink.refresh();
     });
-    contactRow.appendChild(landlineInput);
+    phoneGroup.appendChild(landlineInput);
     var landlineCallLink = buildQuickLink("📞", "固定電話に発信", false, function(){
       return person.landline ? telHref(person.landline) : "";
     });
-    contactRow.appendChild(landlineCallLink.el);
+    phoneGroup.appendChild(landlineCallLink.el);
 
     var mobileLabel = document.createElement("span");
     mobileLabel.className = "field-label";
     mobileLabel.textContent = "携帯電話";
-    contactRow.appendChild(mobileLabel);
+    phoneGroup.appendChild(mobileLabel);
     var mobileInput = document.createElement("input");
     mobileInput.className = "field phone-field";
     mobileInput.placeholder = "携帯電話";
@@ -1426,11 +1430,13 @@
       save();
       mobileCallLink.refresh();
     });
-    contactRow.appendChild(mobileInput);
+    phoneGroup.appendChild(mobileInput);
     var mobileCallLink = buildQuickLink("📞", "携帯電話に発信", false, function(){
       return person.mobile ? telHref(person.mobile) : "";
     });
-    contactRow.appendChild(mobileCallLink.el);
+    phoneGroup.appendChild(mobileCallLink.el);
+
+    contactRow.appendChild(phoneGroup);
 
     var hasContactInfo = person.postalCode || person.address || person.postalCode2 || person.address2 || person.landline || person.mobile;
     if(editMode || hasContactInfo) row.appendChild(contactRow);
