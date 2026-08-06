@@ -414,6 +414,21 @@
     color: var(--ink-soft);
   }
   .edit-mode .address-copy-select{ display: inline-block; }
+  .quick-link{
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    flex: 0 0 auto;
+    border-radius: 6px;
+    border: 1px solid var(--line);
+    background: var(--surface-2);
+    text-decoration: none;
+    font-size: 14px;
+    line-height: 1;
+  }
+  .quick-link.is-disabled{ opacity: 0.3; pointer-events: none; }
 
   .tier-add{
     display: none;
@@ -474,9 +489,10 @@
   .contact-table td.c-name{ font-weight: 700; }
   .contact-table td.c-address{ white-space: normal; min-width: 200px; }
   .c-address-line{ display: flex; align-items: baseline; gap: 6px; flex-wrap: wrap; }
-  .c-address-line + .c-address-line{ margin-top: 4px; padding-top: 4px; border-top: 1px dashed var(--line-soft); }
-  .c-address-label{ font-size: 11.5px; color: var(--ink-soft); white-space: nowrap; }
+  .c-address-line + .c-address-line{ margin-top: 3px; }
+  .c-address-line.is-secondary{ font-size: 12px; opacity: 0.65; }
   .c-postal{ font-size: 12.5px; color: var(--ink-soft); white-space: nowrap; }
+  .c-address-line.is-secondary .c-postal{ font-size: 11px; }
   .contact-table a.c-link{ color: var(--accent); text-decoration: none; }
   .contact-table a.c-link:hover{ text-decoration: underline; }
   .contact-empty{ color: var(--ink-soft); padding: 16px; font-size: 14px; }
@@ -1276,8 +1292,14 @@
       addressInput.addEventListener("input", function(){
         person[addrKey] = addressInput.value;
         save();
+        mapLink.refresh();
       });
       group.appendChild(addressInput);
+
+      var mapLink = buildQuickLink("🗺️", label + "をGoogleマップで開く", true, function(){
+        return person[addrKey] ? mapsHref(person[addrKey]) : "";
+      });
+      group.appendChild(mapLink.el);
 
       // 配偶者・親から住所をコピーするプルダウン(候補は開くたびに最新の状態で作り直す)
       function buildCopySelect(relLabel, candidatesFn){
@@ -1313,6 +1335,7 @@
             postalInput.value = person[postalKey];
             addressInput.value = person[addrKey];
             save();
+            mapLink.refresh();
           }
           sel.value = "";
         });
@@ -1324,8 +1347,8 @@
       return group;
     }
 
-    contactRow.appendChild(buildAddressGroup("メイン住所", "postalCode", "address"));
-    contactRow.appendChild(buildAddressGroup("サブ住所", "postalCode2", "address2"));
+    contactRow.appendChild(buildAddressGroup("住所", "postalCode", "address"));
+    contactRow.appendChild(buildAddressGroup("住所②", "postalCode2", "address2"));
 
     var landlineLabel = document.createElement("span");
     landlineLabel.className = "field-label";
@@ -1340,8 +1363,13 @@
     landlineInput.addEventListener("input", function(){
       person.landline = landlineInput.value;
       save();
+      landlineCallLink.refresh();
     });
     contactRow.appendChild(landlineInput);
+    var landlineCallLink = buildQuickLink("📞", "固定電話に発信", false, function(){
+      return person.landline ? telHref(person.landline) : "";
+    });
+    contactRow.appendChild(landlineCallLink.el);
 
     var mobileLabel = document.createElement("span");
     mobileLabel.className = "field-label";
@@ -1356,8 +1384,13 @@
     mobileInput.addEventListener("input", function(){
       person.mobile = mobileInput.value;
       save();
+      mobileCallLink.refresh();
     });
     contactRow.appendChild(mobileInput);
+    var mobileCallLink = buildQuickLink("📞", "携帯電話に発信", false, function(){
+      return person.mobile ? telHref(person.mobile) : "";
+    });
+    contactRow.appendChild(mobileCallLink.el);
 
     var hasContactInfo = person.postalCode || person.address || person.postalCode2 || person.address2 || person.landline || person.mobile;
     if(editMode || hasContactInfo) row.appendChild(contactRow);
@@ -1560,6 +1593,28 @@
   function mapsHref(address){
     return "https://www.google.com/maps/search/?api=1&query=" + encodeURIComponent(address);
   }
+  // 一覧画面の入力欄の横に置く小さなリンク(地図・電話)。値がない間は無効化しておき、
+  // 入力されるたびに呼び出し側からrefresh()してhrefを最新に保つ。
+  function buildQuickLink(icon, ariaLabel, external, hrefFn){
+    var a = document.createElement("a");
+    a.className = "quick-link";
+    a.textContent = icon;
+    a.setAttribute("aria-label", ariaLabel);
+    a.title = ariaLabel;
+    if(external){ a.target = "_blank"; a.rel = "noopener"; }
+    function refresh(){
+      var href = hrefFn();
+      if(href){
+        a.href = href;
+        a.classList.remove("is-disabled");
+      }else{
+        a.removeAttribute("href");
+        a.classList.add("is-disabled");
+      }
+    }
+    refresh();
+    return { el: a, refresh: refresh };
+  }
   // 郵便番号(7桁)から住所を自動取得する。外部API(zipcloud)への通信が
   // この画面のセキュリティ制限でブロックされる環境では、何も起こらず手入力にフォールバックする。
   function lookupAddressByPostal(postalCode, callback){
@@ -1608,15 +1663,11 @@
     thead.appendChild(headRow);
     table.appendChild(thead);
 
-    // メイン・サブの住所を1つのセルに縦に並べて表示する
-    function addAddressLine(container, label, postal, address){
+    // 2件目の住所は、入力されている人が少ないため目立たない見た目で縦に並べる
+    function addAddressLine(container, postal, address, secondary){
       if(!postal && !address) return;
       var line = document.createElement("div");
-      line.className = "c-address-line";
-      var lineLabel = document.createElement("span");
-      lineLabel.className = "c-address-label";
-      lineLabel.textContent = label;
-      line.appendChild(lineLabel);
+      line.className = "c-address-line" + (secondary ? " is-secondary" : "");
       if(postal){
         var postalSpan = document.createElement("span");
         postalSpan.className = "c-postal";
@@ -1646,8 +1697,8 @@
 
       var addrTd = document.createElement("td");
       addrTd.className = "c-address";
-      addAddressLine(addrTd, "メイン", p.postalCode, p.address);
-      addAddressLine(addrTd, "サブ", p.postalCode2, p.address2);
+      addAddressLine(addrTd, p.postalCode, p.address, false);
+      addAddressLine(addrTd, p.postalCode2, p.address2, true);
       tr.appendChild(addrTd);
 
       var landlineTd = document.createElement("td");
