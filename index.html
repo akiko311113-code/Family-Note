@@ -184,7 +184,7 @@
     padding: 8px 16px;
     border-bottom: 1px solid var(--line-soft);
     font-family: var(--sans);
-    font-size: 60px;
+    font-size: 30px;
     font-weight: 700;
     letter-spacing: 0.03em;
   }
@@ -209,15 +209,15 @@
   }
   :root[data-theme="dark"] .birthday-row.is-today{ background: linear-gradient(135deg, #4a2b3a, #4a3f22 45%, #1f3a4a); }
   .birthday-who{ display: flex; align-items: baseline; gap: 14px; flex-wrap: wrap; }
-  .birthday-name{ font-size: 60px; font-weight: 700; }
-  .birthday-date{ font-size: 44px; color: var(--ink-soft); font-variant-numeric: tabular-nums; }
-  .birthday-status{ font-size: 48px; color: var(--ink-soft); font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .birthday-name{ font-size: 30px; font-weight: 700; }
+  .birthday-date{ font-size: 22px; color: var(--ink-soft); font-variant-numeric: tabular-nums; }
+  .birthday-status{ font-size: 24px; color: var(--ink-soft); font-variant-numeric: tabular-nums; white-space: nowrap; }
   .birthday-status .days{ color: var(--accent-ink); font-weight: 700; }
-  .birthday-empty{ color: var(--ink-soft); font-size: 44px; padding: 18px 16px; }
+  .birthday-empty{ color: var(--ink-soft); font-size: 22px; padding: 18px 16px; }
   .birthday-celebrate{
     width: 100%;
     text-align: center;
-    font-size: 44px;
+    font-size: 22px;
     font-weight: 800;
     color: var(--celebrate);
     padding: 10px 8px;
@@ -225,7 +225,7 @@
     line-height: 1.5;
   }
   .birthday-celebrate .cake{
-    font-size: 68px;
+    font-size: 34px;
     display: inline-block;
     animation: birthday-wobble 1.6s ease-in-out infinite;
   }
@@ -532,8 +532,8 @@
   .address-field{ flex: 1 1 380px; min-width: 220px; }
   .address-field-full{ flex: 1 1 auto; min-width: 200px; }
   .phone-field{ flex: 0 1 150px; min-width: 110px; }
-  .phone-group{ display: flex; flex-direction: column; gap: 6px; width: 100%; }
-  .phone-line{ display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  .phone-group{ display: flex; align-items: center; gap: 8px; flex-wrap: wrap; width: 100%; }
+  body:not(.edit-mode) .phone-group{ flex-wrap: nowrap; overflow-x: auto; }
   .address-copy-select{
     display: none;
     font-size: 13px;
@@ -712,7 +712,7 @@
     <p class="lede">生年月日を入力すると、開いた時点の満年齢を自動計算して表示します。和暦・西暦のどちらからでも入力でき、両方を表示します。データはこの端末のブラウザ内だけに保存され、外部には送信されません。</p>
     <div class="toolbar">
       <button class="btn btn-primary" id="editToggle" type="button">編集する</button>
-      <button class="btn" id="contactToggle" type="button">連絡先を見る</button>
+      <button class="btn" id="contactToggle" type="button">住所録を見る</button>
       <button class="btn" id="birthdayToggle" type="button">誕生日を見る</button>
       <button class="btn" id="treeToggle" type="button">家系図を見る</button>
       <button class="btn" id="exportBtn" type="button">バックアップを保存(JSON)</button>
@@ -824,6 +824,12 @@
       ]},
       { key: "spouseParents", label: "子の配偶者の両親", people: [
         newPerson("長男の妻の父")
+      ]},
+      { key: "relatives", label: "親族", people: [
+        newPerson("")
+      ]},
+      { key: "others", label: "その他", people: [
+        newPerson("")
       ]}
     ];
   }
@@ -898,6 +904,8 @@
     ensureTier("siblings", "兄弟姉妹", function(){ return [ newPerson("夫の兄弟"), newPerson("妻の兄弟") ]; }, "parents");
     ensureTier("siblingsSpouses", "兄弟姉妹の配偶者", function(){ return [ newPerson("") ]; }, "siblings");
     ensureTier("niblings", "甥・姪", function(){ return [ newPerson("夫の兄弟の子") ]; }, "siblingsSpouses");
+    ensureTier("relatives", "親族", function(){ return [ newPerson("") ]; }, "spouseParents");
+    ensureTier("others", "その他", function(){ return [ newPerson("") ]; }, "relatives");
 
     return parsed;
   }
@@ -1494,48 +1502,51 @@
       var row2 = document.createElement("div");
       row2.className = "address-group-row";
 
-      // 配偶者・親から住所をコピーするプルダウン(候補は開くたびに最新の状態で作り直す)
-      function buildCopySelect(relLabel, candidatesFn){
-        var sel = document.createElement("select");
-        sel.className = "field address-copy-select";
-        sel.setAttribute("aria-label", label + " " + relLabel);
-        function refresh(){
-          sel.innerHTML = "";
-          var first = document.createElement("option");
-          first.value = "";
-          first.textContent = relLabel + "…";
-          sel.appendChild(first);
-          candidatesFn(person).forEach(function(c){
-            if(!c || !c.name.trim() || !c[addrKey]) return;
+      // 親・配偶者から住所をコピーするプルダウン(候補は開くたびに最新の状態で作り直す)。
+      // 「親から」「配偶者から」の2グループをoptgroupでまとめた1つのプルダウンにする。
+      var copySelect = document.createElement("select");
+      copySelect.className = "field address-copy-select";
+      copySelect.setAttribute("aria-label", label + " コピー元を選択");
+      function refreshCopySelect(){
+        copySelect.innerHTML = "";
+        var first = document.createElement("option");
+        first.value = "";
+        first.textContent = "コピー元を選択…";
+        copySelect.appendChild(first);
+        [["親から", findParentCandidates], ["配偶者から", findSpouseCandidates]].forEach(function(group2){
+          var candidates = group2[1](person).filter(function(c){ return c && c.name.trim() && c[addrKey]; });
+          if(!candidates.length) return;
+          var og = document.createElement("optgroup");
+          og.label = group2[0];
+          candidates.forEach(function(c){
             var opt = document.createElement("option");
             opt.value = c.id;
             opt.textContent = c.name + (c.relation ? "(" + c.relation + ")" : "");
-            sel.appendChild(opt);
+            og.appendChild(opt);
           });
-        }
-        sel.addEventListener("mousedown", refresh);
-        sel.addEventListener("focus", refresh);
-        refresh();
-        sel.addEventListener("change", function(){
-          if(!sel.value) return;
-          var src = null;
-          state.tiers.forEach(function(t){
-            t.people.forEach(function(o){ if(o.id === sel.value) src = o; });
-          });
-          if(src){
-            person[postalKey] = src[postalKey];
-            person[addrKey] = src[addrKey];
-            postalInput.value = person[postalKey];
-            addressInput.value = person[addrKey];
-            save();
-            mapLink.refresh();
-          }
-          sel.value = "";
+          copySelect.appendChild(og);
         });
-        return sel;
       }
-      row2.appendChild(buildCopySelect("親からコピー", findParentCandidates));
-      row2.appendChild(buildCopySelect("配偶者からコピー", findSpouseCandidates));
+      copySelect.addEventListener("mousedown", refreshCopySelect);
+      copySelect.addEventListener("focus", refreshCopySelect);
+      refreshCopySelect();
+      copySelect.addEventListener("change", function(){
+        if(!copySelect.value) return;
+        var src = null;
+        state.tiers.forEach(function(t){
+          t.people.forEach(function(o){ if(o.id === copySelect.value) src = o; });
+        });
+        if(src){
+          person[postalKey] = src[postalKey];
+          person[addrKey] = src[addrKey];
+          postalInput.value = person[postalKey];
+          addressInput.value = person[addrKey];
+          save();
+          mapLink.refresh();
+        }
+        copySelect.value = "";
+      });
+      row2.appendChild(copySelect);
       group.appendChild(row2);
 
       return group;
@@ -1567,36 +1578,10 @@
     var phoneGroup = document.createElement("div");
     phoneGroup.className = "phone-group";
 
-    var landlineLine = document.createElement("div");
-    landlineLine.className = "phone-line";
-    var landlineLabel = document.createElement("span");
-    landlineLabel.className = "field-label";
-    landlineLabel.textContent = "固定電話";
-    landlineLine.appendChild(landlineLabel);
-    var landlineInput = document.createElement("input");
-    landlineInput.className = "field phone-field";
-    landlineInput.placeholder = "固定電話";
-    landlineInput.value = person.landline;
-    landlineInput.readOnly = !editMode;
-    landlineInput.setAttribute("aria-label", "固定電話");
-    landlineInput.addEventListener("input", function(){
-      person.landline = landlineInput.value;
-      save();
-      landlineCallLink.refresh();
-    });
-    landlineLine.appendChild(landlineInput);
-    var landlineCallLink = buildQuickLink("📞", "固定電話に発信", false, function(){
-      return person.landline ? telHref(person.landline) : "";
-    });
-    landlineLine.appendChild(landlineCallLink.el);
-    phoneGroup.appendChild(landlineLine);
-
-    var mobileLine = document.createElement("div");
-    mobileLine.className = "phone-line";
     var mobileLabel = document.createElement("span");
     mobileLabel.className = "field-label";
     mobileLabel.textContent = "携帯電話";
-    mobileLine.appendChild(mobileLabel);
+    phoneGroup.appendChild(mobileLabel);
     var mobileInput = document.createElement("input");
     mobileInput.className = "field phone-field";
     mobileInput.placeholder = "携帯電話";
@@ -1608,12 +1593,32 @@
       save();
       mobileCallLink.refresh();
     });
-    mobileLine.appendChild(mobileInput);
+    phoneGroup.appendChild(mobileInput);
     var mobileCallLink = buildQuickLink("📞", "携帯電話に発信", false, function(){
       return person.mobile ? telHref(person.mobile) : "";
     });
-    mobileLine.appendChild(mobileCallLink.el);
-    phoneGroup.appendChild(mobileLine);
+    phoneGroup.appendChild(mobileCallLink.el);
+
+    var landlineLabel = document.createElement("span");
+    landlineLabel.className = "field-label";
+    landlineLabel.textContent = "固定電話";
+    phoneGroup.appendChild(landlineLabel);
+    var landlineInput = document.createElement("input");
+    landlineInput.className = "field phone-field";
+    landlineInput.placeholder = "固定電話";
+    landlineInput.value = person.landline;
+    landlineInput.readOnly = !editMode;
+    landlineInput.setAttribute("aria-label", "固定電話");
+    landlineInput.addEventListener("input", function(){
+      person.landline = landlineInput.value;
+      save();
+      landlineCallLink.refresh();
+    });
+    phoneGroup.appendChild(landlineInput);
+    var landlineCallLink = buildQuickLink("📞", "固定電話に発信", false, function(){
+      return person.landline ? telHref(person.landline) : "";
+    });
+    phoneGroup.appendChild(landlineCallLink.el);
 
     contactRow.appendChild(phoneGroup);
 
@@ -1979,7 +1984,7 @@
     table.className = "contact-table";
     var thead = document.createElement("thead");
     var headRow = document.createElement("tr");
-    ["氏名", "住所", "固定電話", "携帯電話"].forEach(function(label){
+    ["氏名", "住所", "携帯電話", "固定電話"].forEach(function(label){
       var th = document.createElement("th");
       th.textContent = label;
       headRow.appendChild(th);
@@ -2025,16 +2030,6 @@
       addAddressLine(addrTd, p.postalCode2, p.address2, true);
       tr.appendChild(addrTd);
 
-      var landlineTd = document.createElement("td");
-      if(p.landline){
-        var landlineLink = document.createElement("a");
-        landlineLink.className = "c-link";
-        landlineLink.href = telHref(p.landline);
-        landlineLink.textContent = p.landline;
-        landlineTd.appendChild(landlineLink);
-      }
-      tr.appendChild(landlineTd);
-
       var mobileTd = document.createElement("td");
       if(p.mobile){
         var mobileLink = document.createElement("a");
@@ -2044,6 +2039,16 @@
         mobileTd.appendChild(mobileLink);
       }
       tr.appendChild(mobileTd);
+
+      var landlineTd = document.createElement("td");
+      if(p.landline){
+        var landlineLink = document.createElement("a");
+        landlineLink.className = "c-link";
+        landlineLink.href = telHref(p.landline);
+        landlineLink.textContent = p.landline;
+        landlineTd.appendChild(landlineLink);
+      }
+      tr.appendChild(landlineTd);
 
       tbody.appendChild(tr);
     });
@@ -2694,7 +2699,7 @@
   var activeView = "list";
   var VIEW_DEFS = {
     tree: { section: "treeSection", toggle: "treeToggle", label: "家系図を見る" },
-    contact: { section: "contactSection", toggle: "contactToggle", label: "連絡先を見る" },
+    contact: { section: "contactSection", toggle: "contactToggle", label: "住所録を見る" },
     birthday: { section: "birthdaySection", toggle: "birthdayToggle", label: "誕生日を見る" }
   };
   function setActiveView(view){
