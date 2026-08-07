@@ -666,7 +666,6 @@
   .timeline-section{ margin-bottom: 30px; }
   .timeline-wrap{
     overflow: auto;
-    max-height: 70vh;
     background: var(--surface);
     border: 1px solid var(--line-soft);
     border-radius: 8px;
@@ -690,8 +689,8 @@
     top: 0;
     z-index: 2;
   }
-  .timeline-table .timeline-year-col{
-    min-width: 64px;
+  .timeline-table .timeline-month-col{
+    min-width: 52px;
     font-variant-numeric: tabular-nums;
     font-weight: 700;
     position: sticky;
@@ -699,7 +698,7 @@
     background: var(--surface);
     z-index: 1;
   }
-  .timeline-table th.timeline-year-col{ z-index: 3; background: var(--surface-2); }
+  .timeline-table th.timeline-month-col{ z-index: 3; background: var(--surface-2); }
   .timeline-table tr:last-child td{ border-bottom: none; }
   .timeline-table td:last-child, .timeline-table th:last-child{ border-right: none; }
 
@@ -2183,28 +2182,28 @@
     table.className = "timeline-table";
     var thead = document.createElement("thead");
     var headRow = document.createElement("tr");
-    var yearTh = document.createElement("th");
-    yearTh.className = "timeline-year-col";
-    yearTh.textContent = "年";
-    headRow.appendChild(yearTh);
-    for(var m = 1; m <= 12; m++){
-      var mth = document.createElement("th");
-      mth.textContent = m + "月";
-      headRow.appendChild(mth);
+    var monthTh = document.createElement("th");
+    monthTh.className = "timeline-month-col";
+    monthTh.textContent = "月";
+    headRow.appendChild(monthTh);
+    for(var y = startYear; y <= endYear; y++){
+      var yth = document.createElement("th");
+      yth.textContent = y + "年";
+      headRow.appendChild(yth);
     }
     thead.appendChild(headRow);
     table.appendChild(thead);
 
     var tbody = document.createElement("tbody");
-    for(var y = startYear; y <= endYear; y++){
+    for(var m = 1; m <= 12; m++){
       var tr = document.createElement("tr");
-      var yTd = document.createElement("td");
-      yTd.className = "timeline-year-col";
-      yTd.textContent = y + "年";
-      tr.appendChild(yTd);
-      for(var m2 = 1; m2 <= 12; m2++){
+      var mTd = document.createElement("td");
+      mTd.className = "timeline-month-col";
+      mTd.textContent = m + "月";
+      tr.appendChild(mTd);
+      for(var y2 = startYear; y2 <= endYear; y2++){
         var td = document.createElement("td");
-        var cellEntries = entries.filter(function(e){ return e.year === y && e.month === m2; });
+        var cellEntries = entries.filter(function(e){ return e.year === y2 && e.month === m; });
         cellEntries.forEach(function(e, i){
           if(i > 0) td.appendChild(document.createElement("br"));
           td.appendChild(document.createTextNode(e.text));
