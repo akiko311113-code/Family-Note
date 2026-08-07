@@ -1718,7 +1718,7 @@
             name: p.name, month: month, day: day,
             monthOrder: ((month - curMonth) + 12) % 12,
             deceased: true,
-            kyonenAge: death ? calcAge(d, death) : null,
+            kyonenAge: death ? calcKazoeAge(d, death) : null,
             hypotheticalAge: calcAge(d, today)
           });
           return;
