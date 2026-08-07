@@ -688,7 +688,7 @@
   }
   .timeline-table{ border-collapse: collapse; font-size: 12.5px; table-layout: fixed; }
   .timeline-table th, .timeline-table td{
-    padding: 4px 6px;
+    padding: 2px 6px;
     text-align: left;
     vertical-align: top;
     border-bottom: 1px solid var(--line-soft);
@@ -711,7 +711,7 @@
     z-index: 1;
   }
   .timeline-cell-box{
-    height: 4.4em;
+    height: 3.6em;
     overflow-y: auto;
   }
   .timeline-cell-display{ cursor: text; min-height: 1.4em; }
@@ -722,7 +722,6 @@
   }
   .timeline-entry.is-birth{ color: var(--danger); }
   .timeline-entry.is-wedding{ color: var(--wedding-green); }
-  .timeline-entry.timeline-hint{ color: var(--ink-soft); opacity: 0.6; }
   .timeline-cell-textarea{
     display: block;
     width: 100%;
@@ -924,7 +923,6 @@
   </section>
 
   <footer class="note">
-    <p>故人は「故人」にチェックを入れると死亡年月日を入力でき、享年(満年齢・数え年齢の両方)を表示します。</p>
     <p>「編集する」を押すと、入力や行の追加・削除ができます。閲覧だけのときはオフのままにしてください。</p>
   </footer>
 </div>
@@ -2366,12 +2364,6 @@
       });
       var display = buildTimelineCellDisplay(state.timelineOverrides[key]);
       display.addEventListener("click", function(){ showCellEditor(box, key); });
-      if(!state.timelineOverrides[key]){
-        var hint = document.createElement("div");
-        hint.className = "timeline-entry timeline-hint";
-        hint.textContent = "(クリックして入力)";
-        display.appendChild(hint);
-      }
       box.appendChild(display);
     }
 
