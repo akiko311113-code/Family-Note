@@ -689,10 +689,7 @@
     top: 0;
     z-index: 2;
   }
-  .timeline-table th:not(.timeline-month-col),
-  .timeline-table td:not(.timeline-month-col){ width: 11.5em; }
   .timeline-table .timeline-month-col{
-    width: 56px;
     white-space: nowrap;
     font-variant-numeric: tabular-nums;
     font-weight: 700;
@@ -2220,8 +2217,26 @@
       save();
     }
 
+    var monthColPx = 56;
+    var yearColPx = 150;
+    var yearCount = endYear - startYear + 1;
+
     var table = document.createElement("table");
     table.className = "timeline-table";
+    // colgroupで各列の幅をpx指定する(先頭行セルへのwidth指定はブラウザにより解釈がぶれるため、
+    // table-layout:fixedと組み合わせて確実に列幅を固定できるcolgroupを使う)
+    table.style.width = (monthColPx + yearCount * yearColPx) + "px";
+    var colgroup = document.createElement("colgroup");
+    var monthCol = document.createElement("col");
+    monthCol.style.width = monthColPx + "px";
+    colgroup.appendChild(monthCol);
+    for(var yc = startYear; yc <= endYear; yc++){
+      var yearColEl = document.createElement("col");
+      yearColEl.style.width = yearColPx + "px";
+      colgroup.appendChild(yearColEl);
+    }
+    table.appendChild(colgroup);
+
     var thead = document.createElement("thead");
     var headRow = document.createElement("tr");
     var monthTh = document.createElement("th");
