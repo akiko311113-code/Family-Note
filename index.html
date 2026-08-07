@@ -211,6 +211,7 @@
   :root[data-theme="dark"] .birthday-row.is-today{ background: linear-gradient(135deg, #4a2b3a, #4a3f22 45%, #1f3a4a); }
   .birthday-who{ display: flex; align-items: baseline; gap: 14px; flex-wrap: wrap; }
   .birthday-name{ font-size: 20px; font-weight: 700; }
+  .birthday-row.is-deceased .birthday-name{ color: var(--ink-soft); font-weight: 400; opacity: 0.75; }
   .birthday-date{ font-size: 16px; color: var(--ink-soft); font-variant-numeric: tabular-nums; }
   .birthday-status{ font-size: 20px; color: var(--ink-soft); font-variant-numeric: tabular-nums; white-space: nowrap; }
   .birthday-status .days{ color: var(--accent-ink); font-weight: 700; }
@@ -811,7 +812,7 @@
   function newPerson(relation){
     return {
       id: uid(), name: "", altName: "", relation: relation || "", birth: "",
-      deceased: false, deathDate: "", step: false, hideInTree: false,
+      deceased: false, deathDate: "", step: false, hideInTree: false, hideInBirthday: false,
       postalCode: "", address: "", postalCode2: "", address2: "", showAddress2: false, landline: "", mobile: "",
       sendBirthdayMsg: true
     };
@@ -865,6 +866,7 @@
     p.deathDate = p.deathDate || "";
     p.step = !!p.step;
     p.hideInTree = !!p.hideInTree;
+    p.hideInBirthday = !!p.hideInBirthday;
     p.postalCode = p.postalCode || "";
     p.address = p.address || "";
     p.postalCode2 = p.postalCode2 || "";
@@ -1413,6 +1415,27 @@
       tools.appendChild(hideBadge);
     }
 
+    var hideBirthdayLabel = document.createElement("label");
+    hideBirthdayLabel.className = "deceased-checkbox";
+    var hideBirthdayCb = document.createElement("input");
+    hideBirthdayCb.type = "checkbox";
+    hideBirthdayCb.checked = !!person.hideInBirthday;
+    hideBirthdayCb.addEventListener("change", function(){
+      person.hideInBirthday = hideBirthdayCb.checked;
+      save();
+      render();
+    });
+    hideBirthdayLabel.appendChild(hideBirthdayCb);
+    hideBirthdayLabel.appendChild(document.createTextNode("誕生日一覧に表示しない"));
+    tools.appendChild(hideBirthdayLabel);
+
+    if(person.hideInBirthday){
+      var hideBirthdayBadge = document.createElement("span");
+      hideBirthdayBadge.className = "deceased-badge";
+      hideBirthdayBadge.textContent = "(誕生日非表示)";
+      tools.appendChild(hideBirthdayBadge);
+    }
+
     var curIdx = tier.people.indexOf(person);
     var upBtn = document.createElement("button");
     upBtn.type = "button";
@@ -1683,11 +1706,23 @@
     var entries = [];
     state.tiers.forEach(function(tier){
       tier.people.forEach(function(p){
-        if(p.deceased || !p.name.trim()) return;
+        if(p.hideInBirthday || !p.name.trim()) return;
         var d = parseISO(p.birth);
         if(!d) return;
         var month = d.getMonth() + 1;
         var day = d.getDate();
+        if(p.deceased){
+          var death = parseISO(p.deathDate);
+          entries.push({
+            person: p,
+            name: p.name, month: month, day: day,
+            monthOrder: ((month - curMonth) + 12) % 12,
+            deceased: true,
+            kyonenAge: death ? calcAge(d, death) : null,
+            hypotheticalAge: calcAge(d, today)
+          });
+          return;
+        }
         var isToday = (month === curMonth && day === curDay);
         var alreadyPassed = (month === curMonth && day < curDay);
         var age = calcAge(d, today);
@@ -1732,7 +1767,7 @@
       rows.className = "birthday-rows";
       monthEntries.forEach(function(e){
         var row = document.createElement("div");
-        row.className = "birthday-row" + (e.isToday ? " is-today" : "");
+        row.className = "birthday-row" + (e.isToday ? " is-today" : "") + (e.deceased ? " is-deceased" : "");
 
         var who = document.createElement("div");
         who.className = "birthday-who";
@@ -1745,6 +1780,18 @@
         dateEl.textContent = e.month + "月" + e.day + "日";
         who.appendChild(dateEl);
         row.appendChild(who);
+
+        if(e.deceased){
+          var deceasedStatus = document.createElement("div");
+          deceasedStatus.className = "birthday-status";
+          var parts = [];
+          if(e.kyonenAge !== null) parts.push("享年" + e.kyonenAge + "歳");
+          parts.push("存命なら" + e.hypotheticalAge + "歳");
+          deceasedStatus.textContent = parts.join("・");
+          row.appendChild(deceasedStatus);
+          rows.appendChild(row);
+          return;
+        }
 
         if(e.isToday){
           var celebrate = document.createElement("div");
@@ -2796,6 +2843,25 @@
   document.getElementById("editToggle").addEventListener("click", function(){
     editMode = !editMode;
     render();
+  });
+
+  // 編集画面では、Enterキーで次の入力項目へ移動する(改行が必要なtextareaは対象外)
+  document.addEventListener("keydown", function(e){
+    if(e.key !== "Enter" || !editMode) return;
+    var t = e.target;
+    if(t.tagName !== "INPUT" && t.tagName !== "SELECT") return;
+    e.preventDefault();
+    var focusable = Array.prototype.slice.call(
+      document.querySelectorAll('#tiers input, #tiers select')
+    ).filter(function(el){
+      return !el.disabled && !el.readOnly && el.offsetParent !== null;
+    });
+    var idx = focusable.indexOf(t);
+    if(idx >= 0 && idx < focusable.length - 1){
+      var next = focusable[idx + 1];
+      next.focus();
+      if(next.select) next.select();
+    }
   });
 
   document.getElementById("exportBtn").addEventListener("click", function(){
