@@ -16,7 +16,7 @@
     --danger: #9a4b3f;
     --focus: #3c5678;
     --celebrate: #d1490f;
-    --wedding-green: #2f7a4f;
+    --wedding-pink: #c65a82;
     --shadow: 0 1px 2px rgba(36,38,42,0.06), 0 6px 20px rgba(36,38,42,0.05);
     --serif: "Hiragino Mincho ProN", "游明朝体", "Yu Mincho", "YuMincho", "Noto Serif JP", serif;
     --sans: "Hiragino Kaku Gothic ProN", "游ゴシック体", "Yu Gothic", "Noto Sans JP", "Segoe UI", sans-serif;
@@ -38,7 +38,7 @@
       --danger: #d08b7c;
       --focus: #8fa9c9;
       --celebrate: #ff9257;
-      --wedding-green: #7fd19a;
+      --wedding-pink: #f0a8c4;
       --shadow: 0 1px 2px rgba(0,0,0,0.3), 0 8px 24px rgba(0,0,0,0.35);
     }
   }
@@ -58,7 +58,7 @@
     --danger: #d08b7c;
     --focus: #8fa9c9;
     --celebrate: #ff9257;
-    --wedding-green: #7fd19a;
+    --wedding-pink: #f0a8c4;
     --shadow: 0 1px 2px rgba(0,0,0,0.3), 0 8px 24px rgba(0,0,0,0.35);
   }
   :root[data-theme="light"]{
@@ -77,7 +77,7 @@
     --danger: #9a4b3f;
     --focus: #3c5678;
     --celebrate: #d1490f;
-    --wedding-green: #2f7a4f;
+    --wedding-pink: #c65a82;
     --shadow: 0 1px 2px rgba(36,38,42,0.06), 0 6px 20px rgba(36,38,42,0.05);
   }
 
@@ -722,7 +722,7 @@
     overflow-wrap: break-word;
   }
   .timeline-entry.is-birth{ color: var(--danger); }
-  .timeline-entry.is-wedding{ color: var(--wedding-green); }
+  .timeline-entry.is-wedding{ color: var(--wedding-pink); }
   .timeline-cell-textarea{
     display: block;
     width: 100%;
@@ -923,7 +923,7 @@
     </div>
     <div class="timeline-head-wrap" id="timelineHeadWrap"></div>
     <div class="timeline-wrap" id="timelineWrap"></div>
-    <p class="tree-note">※ 「編集する」画面で「年表に表示する」にチェックを入れた方の、誕生(👶赤)と結婚(💍緑)を自動で並べています。その下の欄には「項目名:内容」の形で手入力すると、下で決めた項目の色・アイコンで表示されます(例:旅行:京都旅行)。項目名を付けなければ黒で表示されます。</p>
+    <p class="tree-note">※ 「編集する」画面で「年表に表示する」にチェックを入れた方の、誕生(👶赤)と結婚(💍桃)を自動で並べています。その下の欄には「項目名:内容」の形で手入力すると、下で決めた項目の色・アイコンで表示されます(例:旅行:京都旅行)。項目名を付けなければ黒で表示されます。</p>
 
     <div class="birthday-msg-settings">
       <h2 class="birthday-msg-title">手入力の項目・色・アイコン</h2>
@@ -936,6 +936,7 @@
           <option value="🚗">🚗 車</option>
           <option value="🚃">🚃 電車</option>
           <option value="⛰️">⛰️ 山</option>
+          <option value="🇯🇵">🇯🇵 日の丸</option>
           <option value="🎉">🎉 お祝い</option>
           <option value="🏠">🏠 引越し</option>
           <option value="🎓">🎓 入学・卒業</option>
@@ -2265,7 +2266,7 @@
       if(d){
         entries.push({
           year: d.getFullYear(), month: d.getMonth() + 1, type: "birth",
-          text: (d.getMonth() + 1) + "月" + d.getDate() + "日" + p.name.trim() + "誕生"
+          text: (d.getMonth() + 1) + "/" + d.getDate() + p.name.trim() + "誕生"
         });
       }
     });
@@ -2280,7 +2281,7 @@
       seenPairs[key] = true;
       entries.push({
         year: d.getFullYear(), month: d.getMonth() + 1, type: "wedding",
-        text: (d.getMonth() + 1) + "月" + d.getDate() + "日" + weddingAnniversaryLabel(p, spouse)
+        text: (d.getMonth() + 1) + "/" + d.getDate() + weddingAnniversaryLabel(p, spouse)
       });
     });
     return entries;
