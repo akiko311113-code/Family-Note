@@ -900,7 +900,6 @@
       if(raw) parsed = JSON.parse(raw);
     }catch(e){ parsed = null; }
     if(!parsed || !Array.isArray(parsed.tiers)) parsed = { tiers: defaultTiers() };
-    parsed.westernOnly = !!parsed.westernOnly;
     parsed.birthdayMsg = parsed.birthdayMsg || {};
     parsed.birthdayMsg.template = parsed.birthdayMsg.template ||
       "{name}さん、お誕生日おめでとうございます！{age}歳の新しい1年も、健康で幸せに過ごせますように。";
@@ -1161,17 +1160,11 @@
     eraSelect.addEventListener("change", function(){ recompute("era"); });
     yearEInput.addEventListener("input", function(){ recompute("era"); });
 
-    function applyWesternOnlyVisibility(){
-      var only = opts.westernOnly && opts.westernOnly();
-      eraGroup.style.display = only ? "none" : "";
-    }
-
     setFromISO(getISO());
-    applyWesternOnlyVisibility();
 
     return {
       el: wrap,
-      refresh: function(){ setFromISO(getISO()); applyWesternOnlyVisibility(); },
+      refresh: function(){ setFromISO(getISO()); },
       setReadOnly: function(ro){
         yearWInput.readOnly = ro; monthInput.readOnly = ro; dayInput.readOnly = ro;
         eraSelect.disabled = ro; yearEInput.readOnly = ro;
@@ -1356,7 +1349,7 @@
     var birthField = createDateField(
       function(){ return person.birth; },
       function(v){ person.birth = v; save(); refreshAgeCell(ageCell, person); },
-      { westernOnly: function(){ return !!state.westernOnly; }, viewSuffix: "生まれ" }
+      { viewSuffix: "生まれ" }
     );
     birthField.setReadOnly(!editMode);
     mainLine.appendChild(birthField.el);
@@ -1699,8 +1692,7 @@
       deathLine.appendChild(dLbl);
       var deathField = createDateField(
         function(){ return person.deathDate; },
-        function(v){ person.deathDate = v; save(); refreshAgeCell(ageCell, person); },
-        { westernOnly: function(){ return !!state.westernOnly; } }
+        function(v){ person.deathDate = v; save(); refreshAgeCell(ageCell, person); }
       );
       deathField.setReadOnly(!editMode);
       deathLine.appendChild(deathField.el);
@@ -1731,8 +1723,7 @@
 
       var weddingDateField = createDateField(
         function(){ return person.weddingAnniversary; },
-        function(v){ person.weddingAnniversary = v; save(); },
-        { westernOnly: function(){ return !!state.westernOnly; } }
+        function(v){ person.weddingAnniversary = v; save(); }
       );
       weddingDateField.setReadOnly(!editMode);
       weddingFieldWrap.appendChild(weddingDateField.el);
@@ -2938,7 +2929,6 @@
       try{
         var parsed = JSON.parse(reader.result);
         if(parsed && Array.isArray(parsed.tiers)){
-          parsed.westernOnly = !!parsed.westernOnly;
           parsed.tiers.forEach(function(tier){ tier.people = (tier.people || []).map(normalizePerson); });
           state = parsed;
           save();
