@@ -723,6 +723,29 @@
   }
   .timeline-entry.is-birth{ color: var(--danger); }
   .timeline-entry.is-wedding{ color: var(--wedding-pink); }
+  /* 絵文字フォントの対応状況に左右されないよう、日の丸(白地に赤丸)はCSSで直接描く */
+  .hinomaru-icon{
+    display: inline-block;
+    width: 1.1em;
+    height: 0.78em;
+    background: #ffffff;
+    border: 1px solid #c8c8c8;
+    border-radius: 1px;
+    position: relative;
+    vertical-align: middle;
+    margin-right: 2px;
+  }
+  .hinomaru-icon::after{
+    content: "";
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 0.42em;
+    height: 0.42em;
+    background: #bc002d;
+    border-radius: 50%;
+    transform: translate(-50%, -50%);
+  }
   .timeline-cell-textarea{
     display: block;
     width: 100%;
@@ -936,7 +959,7 @@
           <option value="🚗">🚗 車</option>
           <option value="🚃">🚃 電車</option>
           <option value="⛰️">⛰️ 山</option>
-          <option value="🇯🇵">🇯🇵 日の丸</option>
+          <option value="flag-jp">日の丸</option>
           <option value="🎉">🎉 お祝い</option>
           <option value="🏠">🏠 引越し</option>
           <option value="🎓">🎓 入学・卒業</option>
@@ -2296,6 +2319,18 @@
     }
     return { color: null, icon: "", text: line };
   }
+  // アイコンをrowの先頭に追加する。日の丸は絵文字フォントの対応状況に左右されないよう
+  // CSSで描いた要素を使い、それ以外は絵文字をそのまま文字として追加する。
+  function appendTimelineIcon(row, icon){
+    if(!icon) return;
+    if(icon === "flag-jp"){
+      var span = document.createElement("span");
+      span.className = "hinomaru-icon";
+      row.appendChild(span);
+    }else{
+      row.appendChild(document.createTextNode(icon));
+    }
+  }
   function buildTimelineCellDisplay(rawText){
     var box = document.createElement("div");
     box.className = "timeline-cell-display";
@@ -2304,7 +2339,8 @@
       var parsed = parseTimelineLine(line);
       var row = document.createElement("div");
       row.className = "timeline-entry";
-      row.textContent = (parsed.icon || "") + parsed.text;
+      appendTimelineIcon(row, parsed.icon);
+      row.appendChild(document.createTextNode(parsed.text));
       if(parsed.color) row.style.color = parsed.color;
       box.appendChild(row);
     });
@@ -2436,7 +2472,8 @@
       swatch.style.background = cat.color;
       row.appendChild(swatch);
       var label = document.createElement("span");
-      label.textContent = (cat.icon ? cat.icon + " " : "") + cat.name;
+      appendTimelineIcon(label, cat.icon);
+      label.appendChild(document.createTextNode(cat.icon ? " " + cat.name : cat.name));
       row.appendChild(label);
       var del = document.createElement("button");
       del.type = "button";
