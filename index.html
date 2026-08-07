@@ -184,7 +184,7 @@
     padding: 8px 16px;
     border-bottom: 1px solid var(--line-soft);
     font-family: var(--sans);
-    font-size: 30px;
+    font-size: 20px;
     font-weight: 700;
     letter-spacing: 0.03em;
   }
@@ -209,15 +209,15 @@
   }
   :root[data-theme="dark"] .birthday-row.is-today{ background: linear-gradient(135deg, #4a2b3a, #4a3f22 45%, #1f3a4a); }
   .birthday-who{ display: flex; align-items: baseline; gap: 14px; flex-wrap: wrap; }
-  .birthday-name{ font-size: 30px; font-weight: 700; }
-  .birthday-date{ font-size: 22px; color: var(--ink-soft); font-variant-numeric: tabular-nums; }
-  .birthday-status{ font-size: 24px; color: var(--ink-soft); font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .birthday-name{ font-size: 20px; font-weight: 700; }
+  .birthday-date{ font-size: 16px; color: var(--ink-soft); font-variant-numeric: tabular-nums; }
+  .birthday-status{ font-size: 17px; color: var(--ink-soft); font-variant-numeric: tabular-nums; white-space: nowrap; }
   .birthday-status .days{ color: var(--accent-ink); font-weight: 700; }
-  .birthday-empty{ color: var(--ink-soft); font-size: 22px; padding: 18px 16px; }
+  .birthday-empty{ color: var(--ink-soft); font-size: 16px; padding: 18px 16px; }
   .birthday-celebrate{
     width: 100%;
     text-align: center;
-    font-size: 22px;
+    font-size: 18px;
     font-weight: 800;
     color: var(--celebrate);
     padding: 10px 8px;
@@ -225,7 +225,7 @@
     line-height: 1.5;
   }
   .birthday-celebrate .cake{
-    font-size: 34px;
+    font-size: 26px;
     display: inline-block;
     animation: birthday-wobble 1.6s ease-in-out infinite;
   }
@@ -2764,6 +2764,9 @@
     });
     if(activeView === "tree"){
       var holder = document.getElementById("treeInner");
+      // 前回表示時の縮小率(transform: scale)が残ったままだと、線を実測して配置する
+      // finalize()の座標がその縮小率の影響を受けてずれてしまうため、再構築前に必ず解除する。
+      holder.style.transform = "";
       holder.innerHTML = "";
       var tree = buildFamilyTree();
       holder.appendChild(tree.el);
