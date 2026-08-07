@@ -1076,7 +1076,10 @@
       { name: "旅行", color: "#2f6fb0", icon: "✈️" },
       { name: "登山", color: "#2f7a4f", icon: "⛰️" }
     ];
-    parsed.timelineCategories.forEach(function(c){ c.icon = c.icon || ""; });
+    parsed.timelineCategories.forEach(function(c){
+      c.icon = c.icon || "";
+      if(c.icon === "🇯🇵") c.icon = "flag-jp"; // 旧版で保存された日の丸の絵文字を、CSSで描く版に移行する
+    });
     parsed.tiers.forEach(function(tier){
       tier.people = (tier.people || []).map(normalizePerson);
     });
@@ -3420,7 +3423,10 @@
             { name: "旅行", color: "#2f6fb0", icon: "✈️" },
             { name: "登山", color: "#2f7a4f", icon: "⛰️" }
           ];
-          parsed.timelineCategories.forEach(function(c){ c.icon = c.icon || ""; });
+          parsed.timelineCategories.forEach(function(c){
+      c.icon = c.icon || "";
+      if(c.icon === "🇯🇵") c.icon = "flag-jp"; // 旧版で保存された日の丸の絵文字を、CSSで描く版に移行する
+    });
           state = parsed;
           save();
           render();
