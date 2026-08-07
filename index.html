@@ -16,6 +16,7 @@
     --danger: #9a4b3f;
     --focus: #3c5678;
     --celebrate: #d1490f;
+    --wedding-green: #2f7a4f;
     --shadow: 0 1px 2px rgba(36,38,42,0.06), 0 6px 20px rgba(36,38,42,0.05);
     --serif: "Hiragino Mincho ProN", "游明朝体", "Yu Mincho", "YuMincho", "Noto Serif JP", serif;
     --sans: "Hiragino Kaku Gothic ProN", "游ゴシック体", "Yu Gothic", "Noto Sans JP", "Segoe UI", sans-serif;
@@ -37,6 +38,7 @@
       --danger: #d08b7c;
       --focus: #8fa9c9;
       --celebrate: #ff9257;
+      --wedding-green: #7fd19a;
       --shadow: 0 1px 2px rgba(0,0,0,0.3), 0 8px 24px rgba(0,0,0,0.35);
     }
   }
@@ -56,6 +58,7 @@
     --danger: #d08b7c;
     --focus: #8fa9c9;
     --celebrate: #ff9257;
+    --wedding-green: #7fd19a;
     --shadow: 0 1px 2px rgba(0,0,0,0.3), 0 8px 24px rgba(0,0,0,0.35);
   }
   :root[data-theme="light"]{
@@ -74,6 +77,7 @@
     --danger: #9a4b3f;
     --focus: #3c5678;
     --celebrate: #d1490f;
+    --wedding-green: #2f7a4f;
     --shadow: 0 1px 2px rgba(36,38,42,0.06), 0 6px 20px rgba(36,38,42,0.05);
   }
 
@@ -665,7 +669,8 @@
   /* ---------- 年表 ---------- */
   .timeline-section{ margin-bottom: 30px; }
   .timeline-wrap{
-    overflow: auto;
+    overflow-x: auto;
+    overflow-y: visible;
     background: var(--surface);
     border: 1px solid var(--line-soft);
     border-radius: 8px;
@@ -698,11 +703,18 @@
     background: var(--surface);
     z-index: 1;
   }
+  .timeline-entry{
+    font-size: 12px;
+    line-height: 1.4;
+    overflow-wrap: break-word;
+  }
+  .timeline-entry.is-birth{ color: var(--danger); }
+  .timeline-entry.is-wedding{ color: var(--wedding-green); }
   .timeline-cell-textarea{
     display: block;
     width: 100%;
     box-sizing: border-box;
-    height: 4.8em;
+    height: 3.3em;
     resize: none;
     border: 1px solid transparent;
     background: transparent;
@@ -868,7 +880,7 @@
 
   <section id="timelineSection" class="timeline-section" style="display:none;">
     <div class="timeline-wrap" id="timelineWrap"></div>
-    <p class="tree-note">※ 「編集する」画面で「年表に表示する」にチェックを入れた方の、誕生日と結婚記念日を自動で並べています。各マスは直接クリックして手入力・編集もできます。</p>
+    <p class="tree-note">※ 「編集する」画面で「年表に表示する」にチェックを入れた方の、誕生(赤)と結婚(緑)を自動で並べています。その下の欄には手入力(黒)で自由に書き加えられます。</p>
   </section>
 
   <footer class="note">
@@ -2176,7 +2188,7 @@
       var d = parseISO(p.birth);
       if(d){
         entries.push({
-          year: d.getFullYear(), month: d.getMonth() + 1,
+          year: d.getFullYear(), month: d.getMonth() + 1, type: "birth",
           text: (d.getMonth() + 1) + "月" + d.getDate() + "日" + p.name.trim() + "誕生"
         });
       }
@@ -2191,7 +2203,7 @@
       if(seenPairs[key]) return;
       seenPairs[key] = true;
       entries.push({
-        year: d.getFullYear(), month: d.getMonth() + 1,
+        year: d.getFullYear(), month: d.getMonth() + 1, type: "wedding",
         text: (d.getMonth() + 1) + "月" + d.getDate() + "日" + weddingAnniversaryLabel(p, spouse)
       });
     });
@@ -2204,11 +2216,11 @@
     var startYear = 1951;
     var endYear = Math.max(startYear, new Date().getFullYear());
 
-    // 自動生成した内容をセルごとにまとめる(手入力で上書きされていないセルの初期表示に使う)
-    var autoTextByCell = {};
+    // 自動生成した内容をセルごとにまとめる(誕生・結婚は色分けした読み取り専用テキストとして表示する)
+    var autoEntriesByCell = {};
     entries.forEach(function(e){
       var key = e.year + "_" + e.month;
-      autoTextByCell[key] = autoTextByCell[key] ? autoTextByCell[key] + "\n" + e.text : e.text;
+      (autoEntriesByCell[key] = autoEntriesByCell[key] || []).push(e);
     });
 
     function onCellInput(e){
@@ -2218,7 +2230,7 @@
     }
 
     var monthColPx = 56;
-    var yearColPx = 150;
+    var yearColPx = 165;
     var yearCount = endYear - startYear + 1;
 
     var table = document.createElement("table");
@@ -2261,13 +2273,18 @@
       for(var y2 = startYear; y2 <= endYear; y2++){
         var td = document.createElement("td");
         var key = y2 + "_" + m;
+        (autoEntriesByCell[key] || []).forEach(function(e){
+          var line = document.createElement("div");
+          line.className = "timeline-entry " + (e.type === "wedding" ? "is-wedding" : "is-birth");
+          line.textContent = e.text;
+          td.appendChild(line);
+        });
         var ta = document.createElement("textarea");
         ta.className = "timeline-cell-textarea";
-        ta.rows = 3;
+        ta.rows = 2;
         ta.dataset.key = key;
-        ta.setAttribute("aria-label", y2 + "年" + m + "月の年表");
-        var hasOverride = Object.prototype.hasOwnProperty.call(state.timelineOverrides, key);
-        ta.value = hasOverride ? state.timelineOverrides[key] : (autoTextByCell[key] || "");
+        ta.setAttribute("aria-label", y2 + "年" + m + "月の手入力欄");
+        ta.value = state.timelineOverrides[key] || "";
         ta.addEventListener("input", onCellInput);
         td.appendChild(ta);
         tr.appendChild(td);
