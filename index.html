@@ -792,6 +792,47 @@
     color: var(--ink);
   }
 
+  .timeline-icon-btn{
+    cursor: pointer;
+    border-radius: 3px;
+  }
+  .timeline-icon-btn:hover{ outline: 1px solid var(--accent); }
+
+  .photo-modal{
+    position: fixed;
+    inset: 0;
+    z-index: 50;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .photo-modal-backdrop{
+    position: absolute;
+    inset: 0;
+    background: rgba(0,0,0,0.6);
+  }
+  .photo-modal-inner{
+    position: relative;
+    z-index: 1;
+    max-width: min(92vw, 720px);
+    max-height: 90vh;
+    background: var(--surface);
+    border-radius: 8px;
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    box-shadow: var(--shadow);
+  }
+  .photo-modal-img{
+    max-width: 100%;
+    max-height: 70vh;
+    object-fit: contain;
+    border-radius: 4px;
+    align-self: center;
+  }
+  .photo-modal-actions{ display: flex; justify-content: flex-end; gap: 8px; }
+
   /* ---------- family tree ---------- */
   .tree-section{ margin-bottom: 30px; }
   .tree-toolbar{ display: flex; justify-content: flex-end; margin-bottom: 10px; }
@@ -977,6 +1018,19 @@
   <footer class="note">
     <p>「編集する」を押すと、入力や行の追加・削除ができます。閲覧だけのときはオフのままにしてください。</p>
   </footer>
+
+  <input type="file" id="timelinePhotoFile" accept="image/*" style="display:none;">
+  <div id="photoModal" class="photo-modal" style="display:none;">
+    <div class="photo-modal-backdrop" id="photoModalBackdrop"></div>
+    <div class="photo-modal-inner">
+      <img id="photoModalImg" class="photo-modal-img" alt="">
+      <div class="photo-modal-actions">
+        <button type="button" class="btn" id="photoModalReplaceBtn">写真を変更</button>
+        <button type="button" class="btn btn-ghost" id="photoModalDeleteBtn">削除</button>
+        <button type="button" class="btn" id="photoModalCloseBtn">閉じる</button>
+      </div>
+    </div>
+  </div>
 </div>
 <style id="treePrintPageStyle"></style>
 
@@ -2220,7 +2274,97 @@
     return [];
   }
 
-  // ---- 年表 ----
+  // ---- 年表の写真(IndexedDBに保存。localStorageは容量が小さく写真の保存に向かないため) ----
+  var TIMELINE_PHOTO_DB = "family-note-photos";
+  var TIMELINE_PHOTO_STORE = "photos";
+  function openPhotoDB(){
+    return new Promise(function(resolve, reject){
+      if(!window.indexedDB){ reject(new Error("no-indexeddb")); return; }
+      var req = indexedDB.open(TIMELINE_PHOTO_DB, 1);
+      req.onupgradeneeded = function(){ req.result.createObjectStore(TIMELINE_PHOTO_STORE); };
+      req.onsuccess = function(){ resolve(req.result); };
+      req.onerror = function(){ reject(req.error); };
+    });
+  }
+  function savePhotoBlob(key, blob){
+    return openPhotoDB().then(function(db){
+      return new Promise(function(resolve, reject){
+        var tx = db.transaction(TIMELINE_PHOTO_STORE, "readwrite");
+        tx.objectStore(TIMELINE_PHOTO_STORE).put(blob, key);
+        tx.oncomplete = function(){ resolve(); };
+        tx.onerror = function(){ reject(tx.error); };
+      });
+    });
+  }
+  function getPhotoBlob(key){
+    return openPhotoDB().then(function(db){
+      return new Promise(function(resolve, reject){
+        var tx = db.transaction(TIMELINE_PHOTO_STORE, "readonly");
+        var req = tx.objectStore(TIMELINE_PHOTO_STORE).get(key);
+        req.onsuccess = function(){ resolve(req.result || null); };
+        req.onerror = function(){ reject(req.error); };
+      });
+    });
+  }
+  function deletePhotoBlob(key){
+    return openPhotoDB().then(function(db){
+      return new Promise(function(resolve, reject){
+        var tx = db.transaction(TIMELINE_PHOTO_STORE, "readwrite");
+        tx.objectStore(TIMELINE_PHOTO_STORE).delete(key);
+        tx.oncomplete = function(){ resolve(); };
+        tx.onerror = function(){ reject(tx.error); };
+      });
+    });
+  }
+
+  var currentPhotoKey = null;
+  var currentPhotoObjectUrl = null;
+  function openTimelinePhoto(key){
+    getPhotoBlob(key).then(function(blob){
+      if(blob){
+        showPhotoModal(key, blob);
+      }else{
+        currentPhotoKey = key;
+        document.getElementById("timelinePhotoFile").click();
+      }
+    }).catch(function(){
+      window.alert("この端末・ブラウザでは写真の保存機能が使えないようです。");
+    });
+  }
+  function showPhotoModal(key, blob){
+    currentPhotoKey = key;
+    if(currentPhotoObjectUrl) URL.revokeObjectURL(currentPhotoObjectUrl);
+    currentPhotoObjectUrl = URL.createObjectURL(blob);
+    document.getElementById("photoModalImg").src = currentPhotoObjectUrl;
+    document.getElementById("photoModal").style.display = "flex";
+  }
+  function closePhotoModal(){
+    document.getElementById("photoModal").style.display = "none";
+    if(currentPhotoObjectUrl){ URL.revokeObjectURL(currentPhotoObjectUrl); currentPhotoObjectUrl = null; }
+    currentPhotoKey = null;
+  }
+  document.getElementById("timelinePhotoFile").addEventListener("change", function(e){
+    var file = e.target.files[0];
+    e.target.value = "";
+    if(!file || !currentPhotoKey) return;
+    var key = currentPhotoKey;
+    savePhotoBlob(key, file).then(function(){
+      showPhotoModal(key, file);
+    }).catch(function(){
+      window.alert("写真の保存に失敗しました。もう一度お試しください。");
+    });
+  });
+  document.getElementById("photoModalReplaceBtn").addEventListener("click", function(){
+    document.getElementById("timelinePhotoFile").click();
+  });
+  document.getElementById("photoModalDeleteBtn").addEventListener("click", function(){
+    if(!currentPhotoKey) return;
+    if(!window.confirm("この写真を削除しますか？")) return;
+    deletePhotoBlob(currentPhotoKey).then(closePhotoModal);
+  });
+  document.getElementById("photoModalCloseBtn").addEventListener("click", closePhotoModal);
+  document.getElementById("photoModalBackdrop").addEventListener("click", closePhotoModal);
+
   // 続柄の末尾の言葉から、その人が夫側(男性)か妻側(女性)かを推定する(結婚記念日の表記順に使う)。
   // 判別できない場合はnullを返す。
   function inferIsHusbandSide(person){
@@ -2292,7 +2436,8 @@
       if(d){
         entries.push({
           year: d.getFullYear(), month: d.getMonth() + 1, type: "birth",
-          text: (d.getMonth() + 1) + "/" + d.getDate() + p.name.trim() + "誕生"
+          text: (d.getMonth() + 1) + "/" + d.getDate() + p.name.trim() + "誕生",
+          photoKey: "birth_" + p.id
         });
       }
     });
@@ -2307,7 +2452,8 @@
       seenPairs[key] = true;
       entries.push({
         year: d.getFullYear(), month: d.getMonth() + 1, type: "wedding",
-        text: (d.getMonth() + 1) + "/" + d.getDate() + weddingAnniversaryLabel(p, spouse)
+        text: (d.getMonth() + 1) + "/" + d.getDate() + weddingAnniversaryLabel(p, spouse),
+        photoKey: "wedding_" + key
       });
     });
     return entries;
@@ -2322,27 +2468,38 @@
     }
     return { color: null, icon: "", text: line };
   }
-  // アイコンをrowの先頭に追加する。日の丸は絵文字フォントの対応状況に左右されないよう
-  // CSSで描いた要素を使い、それ以外は絵文字をそのまま文字として追加する。
-  function appendTimelineIcon(row, icon){
+  // アイコンをrowの先頭にクリック可能な形で追加する。クリックすると、その項目に紐づく写真を
+  // 表示する(未登録ならファイルを選んで登録できる)。日の丸は絵文字フォントの対応状況に左右されない
+  // よう、CSSで描いた要素を使う。
+  function appendTimelineIcon(row, icon, photoKey){
     if(!icon) return;
+    var btn = document.createElement("span");
+    btn.className = "timeline-icon-btn";
+    btn.title = "クリックして写真を表示・登録";
     if(icon === "flag-jp"){
-      var span = document.createElement("span");
-      span.className = "hinomaru-icon";
-      row.appendChild(span);
+      var flag = document.createElement("span");
+      flag.className = "hinomaru-icon";
+      btn.appendChild(flag);
     }else{
-      row.appendChild(document.createTextNode(icon));
+      btn.appendChild(document.createTextNode(icon));
     }
+    if(photoKey){
+      btn.addEventListener("click", function(e){
+        e.stopPropagation();
+        openTimelinePhoto(photoKey);
+      });
+    }
+    row.appendChild(btn);
   }
-  function buildTimelineCellDisplay(rawText){
+  function buildTimelineCellDisplay(rawText, cellKey){
     var box = document.createElement("div");
     box.className = "timeline-cell-display";
-    String(rawText || "").split("\n").forEach(function(line){
+    String(rawText || "").split("\n").forEach(function(line, lineIdx){
       if(!line.trim()) return;
       var parsed = parseTimelineLine(line);
       var row = document.createElement("div");
       row.className = "timeline-entry";
-      appendTimelineIcon(row, parsed.icon);
+      appendTimelineIcon(row, parsed.icon, parsed.icon ? "manual_" + cellKey + "_" + lineIdx : null);
       row.appendChild(document.createTextNode(parsed.text));
       if(parsed.color) row.style.color = parsed.color;
       box.appendChild(row);
@@ -2432,10 +2589,11 @@
       (autoEntriesByCell[key] || []).forEach(function(e){
         var line = document.createElement("div");
         line.className = "timeline-entry " + (e.type === "wedding" ? "is-wedding" : "is-birth");
-        line.textContent = (e.type === "wedding" ? "💍" : "👶") + e.text;
+        appendTimelineIcon(line, e.type === "wedding" ? "💍" : "👶", e.photoKey);
+        line.appendChild(document.createTextNode(e.text));
         box.appendChild(line);
       });
-      var display = buildTimelineCellDisplay(state.timelineOverrides[key]);
+      var display = buildTimelineCellDisplay(state.timelineOverrides[key], key);
       display.addEventListener("click", function(){ showCellEditor(box, key); });
       box.appendChild(display);
     }
