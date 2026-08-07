@@ -668,6 +668,7 @@
 
   /* ---------- 年表 ---------- */
   .timeline-section{ margin-bottom: 30px; }
+  .timeline-nav{ display: flex; justify-content: flex-end; gap: 8px; margin-bottom: 8px; }
   .timeline-head-wrap{
     overflow: hidden;
     position: sticky;
@@ -907,6 +908,10 @@
   </section>
 
   <section id="timelineSection" class="timeline-section" style="display:none;">
+    <div class="timeline-nav">
+      <button class="btn" id="timelinePrevBtn" type="button">◀ 5年前</button>
+      <button class="btn" id="timelineNextBtn" type="button">5年後 ▶</button>
+    </div>
     <div class="timeline-head-wrap" id="timelineHeadWrap"></div>
     <div class="timeline-wrap" id="timelineWrap"></div>
     <p class="tree-note">※ 「編集する」画面で「年表に表示する」にチェックを入れた方の、誕生(赤)と結婚(緑)を自動で並べています。その下の欄には「項目名:内容」の形で手入力すると、下で決めた項目の色で表示されます(例:旅行:京都旅行)。項目名を付けなければ黒で表示されます。</p>
@@ -2217,10 +2222,13 @@
     else if(isBHusband === true || isAHusband === false){ husband = personB; wife = personA; }
     else if(personB.altName.trim() && !personA.altName.trim()){ husband = personB; wife = personA; }
     else{ husband = personA; wife = personB; }
-    var husbandLabel = husband.altName.trim() ? husband.altName.trim() : husband.name.trim();
+    // 別名(英語名)が未入力でも、氏名にスペースがあれば(例:MICHAEL JORDAN FOX)先頭の名だけを使う
+    var husbandLabel = husband.altName.trim() ? husband.altName.trim() : husband.name.trim().split(/\s+/)[0];
     var wifeGiven = givenNameOnly(wife, [husband.name, householdSurname()]);
     return husbandLabel + wifeGiven + "結婚";
   }
+  var TIMELINE_MONTH_COL_PX = 56;
+  var TIMELINE_YEAR_COL_PX = 165;
   function collectTimelineEntries(){
     var entries = [];
     var people = [];
@@ -2292,8 +2300,8 @@
       (autoEntriesByCell[key] = autoEntriesByCell[key] || []).push(e);
     });
 
-    var monthColPx = 56;
-    var yearColPx = 165;
+    var monthColPx = TIMELINE_MONTH_COL_PX;
+    var yearColPx = TIMELINE_YEAR_COL_PX;
     var yearCount = endYear - startYear + 1;
     var totalWidth = monthColPx + yearCount * yearColPx;
 
@@ -3252,6 +3260,13 @@
   document.getElementById("contactToggle").addEventListener("click", function(){ setActiveView("contact"); });
   document.getElementById("birthdayToggle").addEventListener("click", function(){ setActiveView("birthday"); });
   document.getElementById("timelineToggle").addEventListener("click", function(){ setActiveView("timeline"); });
+
+  document.getElementById("timelinePrevBtn").addEventListener("click", function(){
+    document.getElementById("timelineWrap").scrollBy({ left: -5 * TIMELINE_YEAR_COL_PX, behavior: "smooth" });
+  });
+  document.getElementById("timelineNextBtn").addEventListener("click", function(){
+    document.getElementById("timelineWrap").scrollBy({ left: 5 * TIMELINE_YEAR_COL_PX, behavior: "smooth" });
+  });
 
   document.getElementById("timelineCategoryAddBtn").addEventListener("click", function(){
     var nameInput = document.getElementById("timelineCategoryName");
