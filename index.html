@@ -662,6 +662,47 @@
   .contact-table a.c-link:hover{ text-decoration: underline; }
   .contact-empty{ color: var(--ink-soft); padding: 16px; font-size: 14px; }
 
+  /* ---------- 年表 ---------- */
+  .timeline-section{ margin-bottom: 30px; }
+  .timeline-wrap{
+    overflow: auto;
+    max-height: 70vh;
+    background: var(--surface);
+    border: 1px solid var(--line-soft);
+    border-radius: 8px;
+    box-shadow: var(--shadow);
+  }
+  .timeline-table{ border-collapse: collapse; font-size: 12.5px; }
+  .timeline-table th, .timeline-table td{
+    padding: 6px 10px;
+    text-align: left;
+    border-bottom: 1px solid var(--line-soft);
+    border-right: 1px solid var(--line-soft);
+    white-space: nowrap;
+    min-width: 92px;
+  }
+  .timeline-table th{
+    font-size: 12px;
+    color: var(--ink-soft);
+    font-weight: 600;
+    background: var(--surface-2);
+    position: sticky;
+    top: 0;
+    z-index: 2;
+  }
+  .timeline-table .timeline-year-col{
+    min-width: 64px;
+    font-variant-numeric: tabular-nums;
+    font-weight: 700;
+    position: sticky;
+    left: 0;
+    background: var(--surface);
+    z-index: 1;
+  }
+  .timeline-table th.timeline-year-col{ z-index: 3; background: var(--surface-2); }
+  .timeline-table tr:last-child td{ border-bottom: none; }
+  .timeline-table td:last-child, .timeline-table th:last-child{ border-right: none; }
+
   /* ---------- family tree ---------- */
   .tree-section{ margin-bottom: 30px; }
   .tree-toolbar{ display: flex; justify-content: flex-end; margin-bottom: 10px; }
@@ -749,6 +790,7 @@
       <button class="btn" id="contactToggle" type="button">住所録を見る</button>
       <button class="btn" id="birthdayToggle" type="button">誕生日を見る</button>
       <button class="btn" id="treeToggle" type="button">家系図を見る</button>
+      <button class="btn" id="timelineToggle" type="button">年表を見る</button>
       <button class="btn" id="exportBtn" type="button">バックアップを保存(JSON)</button>
       <button class="btn" id="importBtn" type="button">読み込む</button>
       <button class="btn btn-ghost" id="printBtn" type="button">印刷用に表示</button>
@@ -808,6 +850,11 @@
     <p class="tree-note">※ 住所をタップするとGoogleマップで、電話番号をタップすると電話をかけられます(対応端末のみ)。</p>
   </section>
 
+  <section id="timelineSection" class="timeline-section" style="display:none;">
+    <div class="timeline-wrap" id="timelineWrap"></div>
+    <p class="tree-note">※ 「編集する」画面で「年表に表示する」にチェックを入れた方の、誕生日と結婚記念日を年ごとに自動で並べています。</p>
+  </section>
+
   <footer class="note">
     <p>年齢は満年齢です。故人は「故人」にチェックを入れると死亡年月日を入力でき、享年(満年齢・数え年齢の両方)を表示します。</p>
     <p>「編集する」を押すと、入力や行の追加・削除ができます。閲覧だけのときはオフのままにしてください。</p>
@@ -827,7 +874,8 @@
       deceased: false, deathDate: "", step: false, hideInTree: false, hideInBirthday: false,
       postalCode: "", address: "", postalCode2: "", address2: "", showAddress2: false, landline: "", mobile: "",
       sendBirthdayMsg: true,
-      weddingAnniversary: "", showWeddingAnniversary: false
+      weddingAnniversary: "", showWeddingAnniversary: false,
+      showInTimeline: false
     };
   }
 
@@ -890,6 +938,7 @@
     p.sendBirthdayMsg = p.sendBirthdayMsg === undefined ? true : !!p.sendBirthdayMsg;
     p.weddingAnniversary = p.weddingAnniversary || "";
     p.showWeddingAnniversary = !!p.showWeddingAnniversary;
+    p.showInTimeline = !!p.showInTimeline;
     return p;
   }
 
@@ -1443,6 +1492,20 @@
       hideBirthdayBadge.textContent = "(誕生日非表示)";
       tools.appendChild(hideBirthdayBadge);
     }
+
+    var timelineLabel = document.createElement("label");
+    timelineLabel.className = "deceased-checkbox";
+    var timelineCb = document.createElement("input");
+    timelineCb.type = "checkbox";
+    timelineCb.checked = !!person.showInTimeline;
+    timelineCb.addEventListener("change", function(){
+      person.showInTimeline = timelineCb.checked;
+      save();
+      render();
+    });
+    timelineLabel.appendChild(timelineCb);
+    timelineLabel.appendChild(document.createTextNode("年表に表示する"));
+    tools.appendChild(timelineLabel);
 
     var curIdx = tier.people.indexOf(person);
     var upBtn = document.createElement("button");
@@ -2028,6 +2091,130 @@
       return match ? [match].concat(findSpouseCandidates(match)) : [];
     }
     return [];
+  }
+
+  // ---- 年表 ----
+  // 続柄の末尾の言葉から、その人が夫側(男性)か妻側(女性)かを推定する(結婚記念日の表記順に使う)。
+  // 判別できない場合はnullを返す。
+  function inferIsHusbandSide(person){
+    if(findTierKeyOf(person) === "self") return personSelfSide(person) === "husband";
+    var r = (person.relation || "").trim();
+    if(!r) return null;
+    var maleWords = ["夫", "父", "息子", "男", "兄", "弟", "祖父"];
+    var femaleWords = ["妻", "母", "娘", "女", "姉", "妹", "祖母"];
+    for(var i = 0; i < maleWords.length; i++){
+      if(r.slice(-maleWords[i].length) === maleWords[i]) return true;
+    }
+    for(var i = 0; i < femaleWords.length; i++){
+      if(r.slice(-femaleWords[i].length) === femaleWords[i]) return false;
+    }
+    return null;
+  }
+  function commonPrefixLen(a, b){
+    var n = Math.min(a.length, b.length);
+    var i = 0;
+    while(i < n && a[i] === b[i]) i++;
+    return i;
+  }
+  // 「本人」「主人」欄2名の氏名から共通する姓を推定する
+  function householdSurname(){
+    var self = tierByKey("self").people;
+    if(self.length >= 2 && self[0].name.trim() && self[1].name.trim()){
+      var len = commonPrefixLen(self[0].name.trim(), self[1].name.trim());
+      if(len >= 1) return self[0].name.trim().slice(0, len);
+    }
+    return self[0] && self[0].name.trim() ? self[0].name.trim().slice(0, Math.min(2, self[0].name.trim().length)) : "";
+  }
+  // 姓を除いた名前部分だけを返す(結婚記念日の表記で配偶者の名を短く書くため)
+  function givenNameOnly(person, referenceNames){
+    var name = person.name.trim();
+    for(var i = 0; i < referenceNames.length; i++){
+      var ref = (referenceNames[i] || "").trim();
+      if(!ref) continue;
+      var len = commonPrefixLen(name, ref);
+      if(len >= 1 && name.length > len) return name.slice(len);
+    }
+    return name;
+  }
+  // 「岡本和夫晶子結婚記念日」「MICHAEL聡子結婚記念日」のように、
+  // 夫側は氏名(英語名がある場合はそちら)、妻側は名前部分のみで表記する
+  function weddingAnniversaryLabel(personA, personB){
+    var isAHusband = inferIsHusbandSide(personA);
+    var isBHusband = inferIsHusbandSide(personB);
+    var husband, wife;
+    if(isAHusband === true || isBHusband === false){ husband = personA; wife = personB; }
+    else if(isBHusband === true || isAHusband === false){ husband = personB; wife = personA; }
+    else{ husband = personA; wife = personB; }
+    var husbandLabel = husband.altName.trim() ? husband.altName.trim() : husband.name.trim();
+    var wifeGiven = givenNameOnly(wife, [husband.name, householdSurname()]);
+    return husbandLabel + wifeGiven + "結婚記念日";
+  }
+  function collectTimelineEntries(){
+    var entries = [];
+    var people = [];
+    state.tiers.forEach(function(tier){
+      tier.people.forEach(function(p){ if(p.showInTimeline && p.name.trim()) people.push(p); });
+    });
+    people.forEach(function(p){
+      var d = parseISO(p.birth);
+      if(d) entries.push({ year: d.getFullYear(), month: d.getMonth() + 1, text: p.name.trim() + "誕生日" });
+    });
+    var seenPairs = {};
+    people.forEach(function(p){
+      var d = parseISO(p.weddingAnniversary);
+      if(!d) return;
+      var spouse = findSpouseCandidates(p)[0];
+      if(!spouse) return;
+      var key = [p.id, spouse.id].sort().join("_");
+      if(seenPairs[key]) return;
+      seenPairs[key] = true;
+      entries.push({ year: d.getFullYear(), month: d.getMonth() + 1, text: weddingAnniversaryLabel(p, spouse) });
+    });
+    return entries;
+  }
+  function renderTimeline(){
+    var wrap = document.getElementById("timelineWrap");
+    wrap.innerHTML = "";
+    var entries = collectTimelineEntries();
+    var startYear = 1951;
+    var endYear = Math.max(startYear, new Date().getFullYear());
+
+    var table = document.createElement("table");
+    table.className = "timeline-table";
+    var thead = document.createElement("thead");
+    var headRow = document.createElement("tr");
+    var yearTh = document.createElement("th");
+    yearTh.className = "timeline-year-col";
+    yearTh.textContent = "年";
+    headRow.appendChild(yearTh);
+    for(var m = 1; m <= 12; m++){
+      var mth = document.createElement("th");
+      mth.textContent = m + "月";
+      headRow.appendChild(mth);
+    }
+    thead.appendChild(headRow);
+    table.appendChild(thead);
+
+    var tbody = document.createElement("tbody");
+    for(var y = startYear; y <= endYear; y++){
+      var tr = document.createElement("tr");
+      var yTd = document.createElement("td");
+      yTd.className = "timeline-year-col";
+      yTd.textContent = y + "年";
+      tr.appendChild(yTd);
+      for(var m2 = 1; m2 <= 12; m2++){
+        var td = document.createElement("td");
+        var cellEntries = entries.filter(function(e){ return e.year === y && e.month === m2; });
+        cellEntries.forEach(function(e, i){
+          if(i > 0) td.appendChild(document.createElement("br"));
+          td.appendChild(document.createTextNode(e.text));
+        });
+        tr.appendChild(td);
+      }
+      tbody.appendChild(tr);
+    }
+    table.appendChild(tbody);
+    wrap.appendChild(table);
   }
 
   // ---- 連絡先一覧 ----
@@ -2829,7 +3016,8 @@
   var VIEW_DEFS = {
     tree: { section: "treeSection", toggle: "treeToggle", label: "家系図を見る" },
     contact: { section: "contactSection", toggle: "contactToggle", label: "住所録を見る" },
-    birthday: { section: "birthdaySection", toggle: "birthdayToggle", label: "誕生日を見る" }
+    birthday: { section: "birthdaySection", toggle: "birthdayToggle", label: "誕生日を見る" },
+    timeline: { section: "timelineSection", toggle: "timelineToggle", label: "年表を見る" }
   };
   function setActiveView(view){
     activeView = (activeView === view) ? "list" : view;
@@ -2854,11 +3042,14 @@
       renderContactTable();
     }else if(activeView === "birthday"){
       renderBirthdayList();
+    }else if(activeView === "timeline"){
+      renderTimeline();
     }
   }
   document.getElementById("treeToggle").addEventListener("click", function(){ setActiveView("tree"); });
   document.getElementById("contactToggle").addEventListener("click", function(){ setActiveView("contact"); });
   document.getElementById("birthdayToggle").addEventListener("click", function(){ setActiveView("birthday"); });
+  document.getElementById("timelineToggle").addEventListener("click", function(){ setActiveView("timeline"); });
 
   window.addEventListener("resize", function(){
     if(activeView === "tree") fitTreeOnScreen();
