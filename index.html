@@ -824,14 +824,25 @@
     gap: 12px;
     box-shadow: var(--shadow);
   }
+  .photo-modal-viewport{
+    overflow: auto;
+    max-height: 62vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--surface-2);
+    border-radius: 4px;
+  }
   .photo-modal-img{
     max-width: 100%;
-    max-height: 70vh;
+    max-height: 62vh;
     object-fit: contain;
     border-radius: 4px;
-    align-self: center;
+    transition: transform 150ms ease;
   }
-  .photo-modal-actions{ display: flex; justify-content: flex-end; gap: 8px; }
+  .photo-modal-nav{ display: flex; align-items: center; justify-content: center; gap: 12px; }
+  .photo-modal-counter{ font-size: 14px; color: var(--ink-soft); font-variant-numeric: tabular-nums; }
+  .photo-modal-actions{ display: flex; align-items: center; justify-content: flex-end; gap: 8px; flex-wrap: wrap; }
 
   /* ---------- family tree ---------- */
   .tree-section{ margin-bottom: 30px; }
@@ -1023,9 +1034,19 @@
   <div id="photoModal" class="photo-modal" style="display:none;">
     <div class="photo-modal-backdrop" id="photoModalBackdrop"></div>
     <div class="photo-modal-inner">
-      <img id="photoModalImg" class="photo-modal-img" alt="">
+      <div class="photo-modal-viewport" id="photoModalViewport">
+        <img id="photoModalImg" class="photo-modal-img" alt="">
+      </div>
+      <div class="photo-modal-nav">
+        <button type="button" class="btn btn-ghost" id="photoModalPrevBtn">◀ 前へ</button>
+        <span id="photoModalCounter" class="photo-modal-counter"></span>
+        <button type="button" class="btn btn-ghost" id="photoModalNextBtn">次へ ▶</button>
+      </div>
       <div class="photo-modal-actions">
-        <button type="button" class="btn" id="photoModalReplaceBtn">写真を変更</button>
+        <button type="button" class="btn btn-ghost" id="photoModalZoomOutBtn">縮小 −</button>
+        <button type="button" class="btn btn-ghost" id="photoModalZoomInBtn">拡大 ＋</button>
+        <span class="spacer"></span>
+        <button type="button" class="btn" id="photoModalAddBtn">写真を追加</button>
         <button type="button" class="btn btn-ghost" id="photoModalDeleteBtn">削除</button>
         <button type="button" class="btn" id="photoModalCloseBtn">閉じる</button>
       </div>
@@ -2275,42 +2296,67 @@
   }
 
   // ---- 年表の写真(IndexedDBに保存。localStorageは容量が小さく写真の保存に向かないため) ----
+  // 1つの項目に複数枚登録できるよう、写真ごとに自動採番したidで保存し、
+  // entryKeyに紐づく写真をまとめて取り出せるようインデックスを張る。
   var TIMELINE_PHOTO_DB = "family-note-photos";
-  var TIMELINE_PHOTO_STORE = "photos";
+  var TIMELINE_PHOTO_STORE = "photos_v2";
   function openPhotoDB(){
     return new Promise(function(resolve, reject){
       if(!window.indexedDB){ reject(new Error("no-indexeddb")); return; }
-      var req = indexedDB.open(TIMELINE_PHOTO_DB, 1);
-      req.onupgradeneeded = function(){ req.result.createObjectStore(TIMELINE_PHOTO_STORE); };
+      var req = indexedDB.open(TIMELINE_PHOTO_DB, 2);
+      req.onupgradeneeded = function(){
+        var db = req.result;
+        var tx = req.transaction;
+        var newStore = db.objectStoreNames.contains(TIMELINE_PHOTO_STORE)
+          ? tx.objectStore(TIMELINE_PHOTO_STORE)
+          : (function(){
+              var s = db.createObjectStore(TIMELINE_PHOTO_STORE, { keyPath: "id", autoIncrement: true });
+              s.createIndex("by_entryKey", "entryKey", { unique: false });
+              return s;
+            })();
+        // 旧バージョン(1項目1枚)のデータがあれば、新しい形式へ移行してから旧ストアを削除する
+        if(db.objectStoreNames.contains("photos")){
+          var oldStore = tx.objectStore("photos");
+          oldStore.openCursor().onsuccess = function(ev){
+            var cursor = ev.target.result;
+            if(cursor){
+              newStore.add({ entryKey: cursor.key, blob: cursor.value, addedAt: Date.now() });
+              cursor.continue();
+            }else{
+              db.deleteObjectStore("photos");
+            }
+          };
+        }
+      };
       req.onsuccess = function(){ resolve(req.result); };
       req.onerror = function(){ reject(req.error); };
     });
   }
-  function savePhotoBlob(key, blob){
+  function addPhotoBlob(entryKey, blob){
     return openPhotoDB().then(function(db){
       return new Promise(function(resolve, reject){
         var tx = db.transaction(TIMELINE_PHOTO_STORE, "readwrite");
-        tx.objectStore(TIMELINE_PHOTO_STORE).put(blob, key);
+        tx.objectStore(TIMELINE_PHOTO_STORE).add({ entryKey: entryKey, blob: blob, addedAt: Date.now() });
         tx.oncomplete = function(){ resolve(); };
         tx.onerror = function(){ reject(tx.error); };
       });
     });
   }
-  function getPhotoBlob(key){
+  function getPhotosByEntryKey(entryKey){
     return openPhotoDB().then(function(db){
       return new Promise(function(resolve, reject){
         var tx = db.transaction(TIMELINE_PHOTO_STORE, "readonly");
-        var req = tx.objectStore(TIMELINE_PHOTO_STORE).get(key);
-        req.onsuccess = function(){ resolve(req.result || null); };
+        var req = tx.objectStore(TIMELINE_PHOTO_STORE).index("by_entryKey").getAll(entryKey);
+        req.onsuccess = function(){ resolve(req.result || []); };
         req.onerror = function(){ reject(req.error); };
       });
     });
   }
-  function deletePhotoBlob(key){
+  function deletePhotoById(id){
     return openPhotoDB().then(function(db){
       return new Promise(function(resolve, reject){
         var tx = db.transaction(TIMELINE_PHOTO_STORE, "readwrite");
-        tx.objectStore(TIMELINE_PHOTO_STORE).delete(key);
+        tx.objectStore(TIMELINE_PHOTO_STORE).delete(id);
         tx.oncomplete = function(){ resolve(); };
         tx.onerror = function(){ reject(tx.error); };
       });
@@ -2318,49 +2364,99 @@
   }
 
   var currentPhotoKey = null;
+  var currentPhotos = [];
+  var currentPhotoIndex = 0;
   var currentPhotoObjectUrl = null;
+  var currentPhotoZoom = 1;
   function openTimelinePhoto(key){
-    getPhotoBlob(key).then(function(blob){
-      if(blob){
-        showPhotoModal(key, blob);
+    currentPhotoKey = key;
+    getPhotosByEntryKey(key).then(function(photos){
+      if(photos.length){
+        currentPhotos = photos;
+        currentPhotoIndex = photos.length - 1;
+        showPhotoModal();
       }else{
-        currentPhotoKey = key;
         document.getElementById("timelinePhotoFile").click();
       }
     }).catch(function(){
       window.alert("この端末・ブラウザでは写真の保存機能が使えないようです。");
     });
   }
-  function showPhotoModal(key, blob){
-    currentPhotoKey = key;
-    if(currentPhotoObjectUrl) URL.revokeObjectURL(currentPhotoObjectUrl);
-    currentPhotoObjectUrl = URL.createObjectURL(blob);
-    document.getElementById("photoModalImg").src = currentPhotoObjectUrl;
+  function showPhotoModal(){
+    currentPhotoZoom = 1;
     document.getElementById("photoModal").style.display = "flex";
+    renderPhotoModal();
+  }
+  function renderPhotoModal(){
+    var photo = currentPhotos[currentPhotoIndex];
+    if(!photo){ closePhotoModal(); return; }
+    if(currentPhotoObjectUrl) URL.revokeObjectURL(currentPhotoObjectUrl);
+    currentPhotoObjectUrl = URL.createObjectURL(photo.blob);
+    var img = document.getElementById("photoModalImg");
+    img.src = currentPhotoObjectUrl;
+    img.style.transform = "scale(" + currentPhotoZoom + ")";
+    document.getElementById("photoModalCounter").textContent = (currentPhotoIndex + 1) + " / " + currentPhotos.length;
+    document.getElementById("photoModalPrevBtn").disabled = currentPhotoIndex <= 0;
+    document.getElementById("photoModalNextBtn").disabled = currentPhotoIndex >= currentPhotos.length - 1;
   }
   function closePhotoModal(){
     document.getElementById("photoModal").style.display = "none";
     if(currentPhotoObjectUrl){ URL.revokeObjectURL(currentPhotoObjectUrl); currentPhotoObjectUrl = null; }
     currentPhotoKey = null;
+    currentPhotos = [];
   }
   document.getElementById("timelinePhotoFile").addEventListener("change", function(e){
     var file = e.target.files[0];
     e.target.value = "";
     if(!file || !currentPhotoKey) return;
     var key = currentPhotoKey;
-    savePhotoBlob(key, file).then(function(){
-      showPhotoModal(key, file);
+    addPhotoBlob(key, file).then(function(){
+      return getPhotosByEntryKey(key);
+    }).then(function(photos){
+      currentPhotos = photos;
+      currentPhotoIndex = photos.length - 1;
+      showPhotoModal();
     }).catch(function(){
       window.alert("写真の保存に失敗しました。もう一度お試しください。");
     });
   });
-  document.getElementById("photoModalReplaceBtn").addEventListener("click", function(){
+  document.getElementById("photoModalAddBtn").addEventListener("click", function(){
     document.getElementById("timelinePhotoFile").click();
   });
   document.getElementById("photoModalDeleteBtn").addEventListener("click", function(){
-    if(!currentPhotoKey) return;
+    if(!currentPhotos.length) return;
     if(!window.confirm("この写真を削除しますか？")) return;
-    deletePhotoBlob(currentPhotoKey).then(closePhotoModal);
+    var id = currentPhotos[currentPhotoIndex].id;
+    var key = currentPhotoKey;
+    deletePhotoById(id).then(function(){
+      return getPhotosByEntryKey(key);
+    }).then(function(photos){
+      currentPhotos = photos;
+      if(!photos.length){ closePhotoModal(); return; }
+      currentPhotoIndex = Math.min(currentPhotoIndex, photos.length - 1);
+      currentPhotoZoom = 1;
+      renderPhotoModal();
+    });
+  });
+  document.getElementById("photoModalPrevBtn").addEventListener("click", function(){
+    if(currentPhotoIndex <= 0) return;
+    currentPhotoIndex--;
+    currentPhotoZoom = 1;
+    renderPhotoModal();
+  });
+  document.getElementById("photoModalNextBtn").addEventListener("click", function(){
+    if(currentPhotoIndex >= currentPhotos.length - 1) return;
+    currentPhotoIndex++;
+    currentPhotoZoom = 1;
+    renderPhotoModal();
+  });
+  document.getElementById("photoModalZoomInBtn").addEventListener("click", function(){
+    currentPhotoZoom = Math.min(currentPhotoZoom + 0.25, 3);
+    document.getElementById("photoModalImg").style.transform = "scale(" + currentPhotoZoom + ")";
+  });
+  document.getElementById("photoModalZoomOutBtn").addEventListener("click", function(){
+    currentPhotoZoom = Math.max(currentPhotoZoom - 0.25, 0.5);
+    document.getElementById("photoModalImg").style.transform = "scale(" + currentPhotoZoom + ")";
   });
   document.getElementById("photoModalCloseBtn").addEventListener("click", closePhotoModal);
   document.getElementById("photoModalBackdrop").addEventListener("click", closePhotoModal);
@@ -2620,6 +2716,8 @@
     wrap.appendChild(table);
 
     wrap.onscroll = function(){ headWrap.scrollLeft = wrap.scrollLeft; };
+    // 開いた時点では、一番新しい年(直近)が見えるよう右端までスクロールしておく
+    wrap.scrollLeft = wrap.scrollWidth;
     renderTimelineCategories();
   }
   function renderTimelineCategories(){
