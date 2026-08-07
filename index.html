@@ -292,20 +292,21 @@
   }
   .birthday-msg-targets{
     margin-top: 10px;
+    display: inline-block;
+    max-width: 100%;
     overflow-x: auto;
     background: var(--surface-2);
     border: 1px solid var(--line-soft);
     border-radius: 8px;
   }
-  .birthday-msg-table{ width: 100%; border-collapse: collapse; font-size: 16px; }
+  .birthday-msg-table{ width: auto; border-collapse: collapse; font-size: 16px; }
   .birthday-msg-table th, .birthday-msg-table td{
-    padding: 10px 14px;
+    padding: 8px 16px;
     text-align: left;
     border-bottom: 1px solid var(--line-soft);
   }
   .birthday-msg-table th{ font-size: 13px; color: var(--ink-soft); font-weight: 600; }
   .birthday-msg-table tr:last-child td{ border-bottom: none; }
-  .birthday-msg-rel{ color: var(--ink-soft); font-size: 14px; }
   .birthday-msg-cb-cell{ text-align: center; }
   .birthday-msg-cb-cell input[type="checkbox"]{ width: 20px; height: 20px; }
   .birthday-msg-empty{ color: var(--ink-soft); font-size: 16px; }
@@ -769,7 +770,7 @@
         <input type="time" id="birthdayMsgTime" class="birthday-msg-time">
       </div>
 
-      <h3 class="birthday-msg-title">送る人・送らない人</h3>
+      <h3 class="birthday-msg-title">お祝いメッセージを送る</h3>
       <div id="birthdayMsgTargets" class="birthday-msg-targets"></div>
     </div>
   </section>
@@ -1883,7 +1884,7 @@
     table.className = "birthday-msg-table";
     var thead = document.createElement("thead");
     var headRow = document.createElement("tr");
-    ["氏名", "続柄", "送る"].forEach(function(label){
+    ["氏名", "送る"].forEach(function(label){
       var th = document.createElement("th");
       th.textContent = label;
       headRow.appendChild(th);
@@ -1898,11 +1899,6 @@
       var nameTd = document.createElement("td");
       nameTd.textContent = p.name;
       tr.appendChild(nameTd);
-
-      var relTd = document.createElement("td");
-      relTd.className = "birthday-msg-rel";
-      relTd.textContent = p.relation + (p.mobile ? "" : "（携帯電話番号未登録）");
-      tr.appendChild(relTd);
 
       var cbTd = document.createElement("td");
       cbTd.className = "birthday-msg-cb-cell";
