@@ -212,7 +212,7 @@
   .birthday-who{ display: flex; align-items: baseline; gap: 14px; flex-wrap: wrap; }
   .birthday-name{ font-size: 20px; font-weight: 700; }
   .birthday-row.is-deceased .birthday-name{ color: var(--ink-soft); font-weight: 400; opacity: 0.75; }
-  .birthday-date{ font-size: 16px; color: var(--ink-soft); font-variant-numeric: tabular-nums; }
+  .birthday-date{ font-size: 19px; color: var(--ink-soft); font-variant-numeric: tabular-nums; }
   .birthday-status{ font-size: 20px; color: var(--ink-soft); font-variant-numeric: tabular-nums; white-space: nowrap; }
   .birthday-status .days{ color: var(--accent-ink); font-weight: 700; }
   .birthday-empty{ color: var(--ink-soft); font-size: 16px; padding: 18px 16px; }
@@ -292,23 +292,22 @@
   }
   .birthday-msg-targets{
     margin-top: 10px;
-    display: inline-block;
-    max-width: 100%;
-    overflow-x: auto;
+    padding: 4px 16px;
     background: var(--surface-2);
     border: 1px solid var(--line-soft);
     border-radius: 8px;
+    column-width: 160px;
+    column-gap: 24px;
   }
-  .birthday-msg-table{ width: auto; border-collapse: collapse; font-size: 16px; }
-  .birthday-msg-table th, .birthday-msg-table td{
-    padding: 8px 16px;
-    text-align: left;
-    border-bottom: 1px solid var(--line-soft);
+  .birthday-msg-item{
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 0;
+    break-inside: avoid;
+    font-size: 16px;
   }
-  .birthday-msg-table th{ font-size: 13px; color: var(--ink-soft); font-weight: 600; }
-  .birthday-msg-table tr:last-child td{ border-bottom: none; }
-  .birthday-msg-cb-cell{ text-align: center; }
-  .birthday-msg-cb-cell input[type="checkbox"]{ width: 20px; height: 20px; }
+  .birthday-msg-item input[type="checkbox"]{ width: 19px; height: 19px; flex-shrink: 0; }
   .birthday-msg-empty{ color: var(--ink-soft); font-size: 16px; }
 
   /* ---------- sections ---------- */
@@ -1880,44 +1879,23 @@
       targets.appendChild(empty);
       return;
     }
-    var table = document.createElement("table");
-    table.className = "birthday-msg-table";
-    var thead = document.createElement("thead");
-    var headRow = document.createElement("tr");
-    ["氏名", "送る"].forEach(function(label){
-      var th = document.createElement("th");
-      th.textContent = label;
-      headRow.appendChild(th);
-    });
-    thead.appendChild(headRow);
-    table.appendChild(thead);
-
-    var tbody = document.createElement("tbody");
     people.forEach(function(p){
-      var tr = document.createElement("tr");
-
-      var nameTd = document.createElement("td");
-      nameTd.textContent = p.name;
-      tr.appendChild(nameTd);
-
-      var cbTd = document.createElement("td");
-      cbTd.className = "birthday-msg-cb-cell";
+      var item = document.createElement("label");
+      item.className = "birthday-msg-item";
       var cb = document.createElement("input");
       cb.type = "checkbox";
-      cb.setAttribute("aria-label", p.name + "にお祝いメッセージを送る");
       cb.checked = !!p.sendBirthdayMsg;
       cb.addEventListener("change", function(){
         p.sendBirthdayMsg = cb.checked;
         save();
         renderBirthdayList();
       });
-      cbTd.appendChild(cb);
-      tr.appendChild(cbTd);
-
-      tbody.appendChild(tr);
+      item.appendChild(cb);
+      var span = document.createElement("span");
+      span.textContent = p.name;
+      item.appendChild(span);
+      targets.appendChild(item);
     });
-    table.appendChild(tbody);
-    targets.appendChild(table);
   }
 
   function escapeHtml(s){
