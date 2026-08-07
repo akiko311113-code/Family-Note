@@ -107,10 +107,10 @@
     flex-wrap: wrap;
   }
   h1{
-    font-family: var(--sans);
-    font-weight: 700;
-    font-size: 34px;
-    letter-spacing: 0.02em;
+    font-family: var(--serif);
+    font-weight: 600;
+    font-size: 36px;
+    letter-spacing: 0.01em;
     margin: 0;
     text-wrap: balance;
   }
@@ -178,6 +178,7 @@
     background: var(--surface);
     border: 1px solid var(--line-soft);
     border-radius: 4px;
+    box-shadow: var(--shadow);
     overflow: hidden;
   }
   .birthday-month-head{
@@ -262,6 +263,7 @@
     background: var(--surface);
     border: 1px solid var(--line-soft);
     border-radius: 4px;
+    box-shadow: var(--shadow);
   }
   .birthday-msg-title{ font-size: 22px; font-weight: 700; margin: 0 0 10px; }
   .birthday-msg-note{ font-size: 16px; color: var(--ink-soft); line-height: 1.7; margin: 0 0 16px; }
@@ -313,6 +315,7 @@
     background: var(--surface);
     border: 1px solid var(--line-soft);
     border-radius: 4px;
+    box-shadow: var(--shadow);
     overflow: visible;
   }
   .tier-head{
@@ -625,11 +628,12 @@
     .toolbar, .save-state, .del-btn, .move-btn, .tier-add, .deceased-checkbox, .tree-toolbar{ display: none !important; }
     section.tier{ break-inside: avoid; box-shadow: none; }
     .field{ border-color: transparent !important; background: transparent !important; }
+    .birthday-month, .contact-table-wrap, .birthday-msg-settings{ box-shadow: none; }
   }
 
   /* ---------- contact list ---------- */
   .contact-section{ margin-bottom: 30px; }
-  .contact-table-wrap{ overflow-x: auto; background: var(--surface); border: 1px solid var(--line-soft); border-radius: 8px; }
+  .contact-table-wrap{ overflow-x: auto; background: var(--surface); border: 1px solid var(--line-soft); border-radius: 8px; box-shadow: var(--shadow); }
   .contact-table{ width: 100%; border-collapse: collapse; font-size: 14px; }
   .contact-table th, .contact-table td{ padding: 9px 12px; text-align: left; border-bottom: 1px solid var(--line-soft); white-space: nowrap; }
   .contact-table th{ font-size: 12.5px; color: var(--ink-soft); font-weight: 600; background: var(--surface-2); position: sticky; top: 0; }
@@ -648,7 +652,7 @@
   /* ---------- family tree ---------- */
   .tree-section{ margin-bottom: 30px; }
   .tree-toolbar{ display: flex; justify-content: flex-end; margin-bottom: 10px; }
-  .tree-outer{ overflow: auto; background: var(--surface); border: 1px solid var(--line-soft); border-radius: 4px; padding: 24px; }
+  .tree-outer{ overflow: auto; background: var(--surface); border: 1px solid var(--line-soft); border-radius: 4px; box-shadow: var(--shadow); padding: 24px; }
   .tree-inner{ width: fit-content; margin: 0 auto; }
   .tree-diagram{ position: relative; display: flex; flex-direction: column; align-items: center; }
   .tree-band{ display: flex; align-items: flex-start; justify-content: center; gap: 22px; flex-wrap: wrap; }
@@ -705,7 +709,7 @@
   .spouse-parents-abs{ position: absolute; display: flex; align-items: center; gap: 20px; white-space: nowrap; }
 
   @media print{
-    .tree-outer{ border: none; padding: 0; overflow: visible; background: #fff; }
+    .tree-outer{ border: none; padding: 0; overflow: visible; background: #fff; box-shadow: none; }
     .tree-note{ display: none; }
   }
 
