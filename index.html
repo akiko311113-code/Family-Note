@@ -759,6 +759,15 @@
     color: var(--ink);
   }
   .timeline-category-add input[type="color"]{ width: 36px; height: 30px; padding: 2px; border: 1px solid var(--line); border-radius: 4px; background: var(--surface-2); }
+  .timeline-category-icon-select{
+    font-size: 15px;
+    font-family: var(--sans);
+    padding: 6px 8px;
+    border: 1px solid var(--line);
+    border-radius: 4px;
+    background: var(--surface-2);
+    color: var(--ink);
+  }
 
   /* ---------- family tree ---------- */
   .tree-section{ margin-bottom: 30px; }
@@ -914,13 +923,27 @@
     </div>
     <div class="timeline-head-wrap" id="timelineHeadWrap"></div>
     <div class="timeline-wrap" id="timelineWrap"></div>
-    <p class="tree-note">※ 「編集する」画面で「年表に表示する」にチェックを入れた方の、誕生(赤)と結婚(緑)を自動で並べています。その下の欄には「項目名:内容」の形で手入力すると、下で決めた項目の色で表示されます(例:旅行:京都旅行)。項目名を付けなければ黒で表示されます。</p>
+    <p class="tree-note">※ 「編集する」画面で「年表に表示する」にチェックを入れた方の、誕生(👶赤)と結婚(💍緑)を自動で並べています。その下の欄には「項目名:内容」の形で手入力すると、下で決めた項目の色・アイコンで表示されます(例:旅行:京都旅行)。項目名を付けなければ黒で表示されます。</p>
 
     <div class="birthday-msg-settings">
-      <h2 class="birthday-msg-title">手入力の項目と色</h2>
+      <h2 class="birthday-msg-title">手入力の項目・色・アイコン</h2>
       <div id="timelineCategoryList" class="timeline-category-list"></div>
       <div class="timeline-category-add">
         <input type="text" id="timelineCategoryName" class="timeline-category-name-input" placeholder="新しい項目名(例:旅行)">
+        <select id="timelineCategoryIcon" class="timeline-category-icon-select" aria-label="アイコン">
+          <option value="">アイコンなし</option>
+          <option value="✈️">✈️ 飛行機</option>
+          <option value="🚗">🚗 車</option>
+          <option value="🚃">🚃 電車</option>
+          <option value="⛰️">⛰️ 山</option>
+          <option value="🎉">🎉 お祝い</option>
+          <option value="🏠">🏠 引越し</option>
+          <option value="🎓">🎓 入学・卒業</option>
+          <option value="⚕️">⚕️ 通院・手術</option>
+          <option value="🎂">🎂 記念日</option>
+          <option value="📷">📷 思い出</option>
+          <option value="⭐">⭐ その他</option>
+        </select>
         <input type="color" id="timelineCategoryColor" value="#2f6fb0" aria-label="項目の色">
         <button type="button" class="btn" id="timelineCategoryAddBtn">追加</button>
       </div>
@@ -1026,9 +1049,10 @@
     parsed.birthdayMsg.reminderTime = parsed.birthdayMsg.reminderTime || "09:00";
     parsed.timelineOverrides = parsed.timelineOverrides || {};
     parsed.timelineCategories = parsed.timelineCategories || [
-      { name: "旅行", color: "#2f6fb0" },
-      { name: "登山", color: "#2f7a4f" }
+      { name: "旅行", color: "#2f6fb0", icon: "✈️" },
+      { name: "登山", color: "#2f7a4f", icon: "⛰️" }
     ];
+    parsed.timelineCategories.forEach(function(c){ c.icon = c.icon || ""; });
     parsed.tiers.forEach(function(tier){
       tier.people = (tier.people || []).map(normalizePerson);
     });
@@ -2222,8 +2246,9 @@
     else if(isBHusband === true || isAHusband === false){ husband = personB; wife = personA; }
     else if(personB.altName.trim() && !personA.altName.trim()){ husband = personB; wife = personA; }
     else{ husband = personA; wife = personB; }
-    // 別名(英語名)が未入力でも、氏名にスペースがあれば(例:MICHAEL JORDAN FOX)先頭の名だけを使う
-    var husbandLabel = husband.altName.trim() ? husband.altName.trim() : husband.name.trim().split(/\s+/)[0];
+    // 別名(英語名)・氏名のどちらでも、スペース区切りなら(例:MICHAEL JORDAN FOX)先頭の名だけを使う
+    var husbandSource = husband.altName.trim() ? husband.altName.trim() : husband.name.trim();
+    var husbandLabel = husbandSource.split(/\s+/)[0];
     var wifeGiven = givenNameOnly(wife, [husband.name, householdSurname()]);
     return husbandLabel + wifeGiven + "結婚";
   }
@@ -2260,15 +2285,15 @@
     });
     return entries;
   }
-  // 手入力欄の「項目名:内容」を解析し、項目名が登録済みならその色情報を返す
+  // 手入力欄の「項目名:内容」を解析し、項目名が登録済みならその色・アイコン情報を返す
   function parseTimelineLine(line){
     var idx = line.indexOf("：") !== -1 ? line.indexOf("：") : line.indexOf(":");
     if(idx > 0){
       var name = line.slice(0, idx).trim();
       var cat = state.timelineCategories.filter(function(c){ return c.name === name; })[0];
-      if(cat) return { color: cat.color, text: line.slice(idx + 1).trim() || line };
+      if(cat) return { color: cat.color, icon: cat.icon, text: line.slice(idx + 1).trim() || line };
     }
-    return { color: null, text: line };
+    return { color: null, icon: "", text: line };
   }
   function buildTimelineCellDisplay(rawText){
     var box = document.createElement("div");
@@ -2278,7 +2303,7 @@
       var parsed = parseTimelineLine(line);
       var row = document.createElement("div");
       row.className = "timeline-entry";
-      row.textContent = parsed.text;
+      row.textContent = (parsed.icon || "") + parsed.text;
       if(parsed.color) row.style.color = parsed.color;
       box.appendChild(row);
     });
@@ -2367,7 +2392,7 @@
       (autoEntriesByCell[key] || []).forEach(function(e){
         var line = document.createElement("div");
         line.className = "timeline-entry " + (e.type === "wedding" ? "is-wedding" : "is-birth");
-        line.textContent = e.text;
+        line.textContent = (e.type === "wedding" ? "💍" : "👶") + e.text;
         box.appendChild(line);
       });
       var display = buildTimelineCellDisplay(state.timelineOverrides[key]);
@@ -2410,7 +2435,7 @@
       swatch.style.background = cat.color;
       row.appendChild(swatch);
       var label = document.createElement("span");
-      label.textContent = cat.name;
+      label.textContent = (cat.icon ? cat.icon + " " : "") + cat.name;
       row.appendChild(label);
       var del = document.createElement("button");
       del.type = "button";
@@ -3271,12 +3296,14 @@
   document.getElementById("timelineCategoryAddBtn").addEventListener("click", function(){
     var nameInput = document.getElementById("timelineCategoryName");
     var colorInput = document.getElementById("timelineCategoryColor");
+    var iconInput = document.getElementById("timelineCategoryIcon");
     var name = nameInput.value.trim();
     if(!name) return;
     state.timelineCategories = state.timelineCategories.filter(function(c){ return c.name !== name; });
-    state.timelineCategories.push({ name: name, color: colorInput.value });
+    state.timelineCategories.push({ name: name, color: colorInput.value, icon: iconInput.value });
     save();
     nameInput.value = "";
+    iconInput.value = "";
     if(activeView === "timeline") renderTimeline();
   });
 
@@ -3352,9 +3379,10 @@
           parsed.tiers.forEach(function(tier){ tier.people = (tier.people || []).map(normalizePerson); });
           parsed.timelineOverrides = parsed.timelineOverrides || {};
           parsed.timelineCategories = parsed.timelineCategories || [
-            { name: "旅行", color: "#2f6fb0" },
-            { name: "登山", color: "#2f7a4f" }
+            { name: "旅行", color: "#2f6fb0", icon: "✈️" },
+            { name: "登山", color: "#2f7a4f", icon: "⛰️" }
           ];
+          parsed.timelineCategories.forEach(function(c){ c.icon = c.icon || ""; });
           state = parsed;
           save();
           render();
