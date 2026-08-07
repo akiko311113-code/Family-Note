@@ -673,7 +673,7 @@
   }
   .timeline-table{ border-collapse: collapse; font-size: 12.5px; table-layout: fixed; }
   .timeline-table th, .timeline-table td{
-    padding: 6px 10px;
+    padding: 4px 6px;
     text-align: left;
     vertical-align: top;
     border-bottom: 1px solid var(--line-soft);
@@ -690,13 +690,7 @@
     z-index: 2;
   }
   .timeline-table th:not(.timeline-month-col),
-  .timeline-table td:not(.timeline-month-col){ width: var(--timeline-year-w, 190px); }
-  .timeline-table td:not(.timeline-month-col){
-    white-space: normal;
-    overflow-wrap: break-word;
-    line-height: 1.5;
-    height: 68px;
-  }
+  .timeline-table td:not(.timeline-month-col){ width: 11.5em; }
   .timeline-table .timeline-month-col{
     width: 56px;
     white-space: nowrap;
@@ -707,6 +701,23 @@
     background: var(--surface);
     z-index: 1;
   }
+  .timeline-cell-textarea{
+    display: block;
+    width: 100%;
+    box-sizing: border-box;
+    height: 4.8em;
+    resize: none;
+    border: 1px solid transparent;
+    background: transparent;
+    font-family: var(--sans);
+    font-size: 12.5px;
+    line-height: 1.5;
+    color: var(--ink);
+    padding: 2px 3px;
+    border-radius: 3px;
+  }
+  .timeline-cell-textarea:hover{ border-color: var(--line); }
+  .timeline-cell-textarea:focus{ border-color: var(--accent); outline: none; background: var(--surface-2); }
   .timeline-table th.timeline-month-col{ z-index: 3; background: var(--surface-2); }
   .timeline-table tr:last-child td{ border-bottom: none; }
   .timeline-table td:last-child, .timeline-table th:last-child{ border-right: none; }
@@ -860,7 +871,7 @@
 
   <section id="timelineSection" class="timeline-section" style="display:none;">
     <div class="timeline-wrap" id="timelineWrap"></div>
-    <p class="tree-note">※ 「編集する」画面で「年表に表示する」にチェックを入れた方の、誕生日と結婚記念日を年ごとに自動で並べています。</p>
+    <p class="tree-note">※ 「編集する」画面で「年表に表示する」にチェックを入れた方の、誕生日と結婚記念日を自動で並べています。各マスは直接クリックして手入力・編集もできます。</p>
   </section>
 
   <footer class="note">
@@ -961,6 +972,7 @@
     parsed.birthdayMsg.template = parsed.birthdayMsg.template ||
       "{name}さん、お誕生日おめでとうございます！{age}歳の新しい1年も、健康で幸せに過ごせますように。";
     parsed.birthdayMsg.reminderTime = parsed.birthdayMsg.reminderTime || "09:00";
+    parsed.timelineOverrides = parsed.timelineOverrides || {};
     parsed.tiers.forEach(function(tier){
       tier.people = (tier.people || []).map(normalizePerson);
     });
@@ -2195,6 +2207,19 @@
     var startYear = 1951;
     var endYear = Math.max(startYear, new Date().getFullYear());
 
+    // 自動生成した内容をセルごとにまとめる(手入力で上書きされていないセルの初期表示に使う)
+    var autoTextByCell = {};
+    entries.forEach(function(e){
+      var key = e.year + "_" + e.month;
+      autoTextByCell[key] = autoTextByCell[key] ? autoTextByCell[key] + "\n" + e.text : e.text;
+    });
+
+    function onCellInput(e){
+      var key = e.target.dataset.key;
+      state.timelineOverrides[key] = e.target.value;
+      save();
+    }
+
     var table = document.createElement("table");
     table.className = "timeline-table";
     var thead = document.createElement("thead");
@@ -2220,26 +2245,22 @@
       tr.appendChild(mTd);
       for(var y2 = startYear; y2 <= endYear; y2++){
         var td = document.createElement("td");
-        var cellEntries = entries.filter(function(e){ return e.year === y2 && e.month === m; });
-        cellEntries.forEach(function(e, i){
-          if(i > 0) td.appendChild(document.createElement("br"));
-          td.appendChild(document.createTextNode(e.text));
-        });
+        var key = y2 + "_" + m;
+        var ta = document.createElement("textarea");
+        ta.className = "timeline-cell-textarea";
+        ta.rows = 3;
+        ta.dataset.key = key;
+        ta.setAttribute("aria-label", y2 + "年" + m + "月の年表");
+        var hasOverride = Object.prototype.hasOwnProperty.call(state.timelineOverrides, key);
+        ta.value = hasOverride ? state.timelineOverrides[key] : (autoTextByCell[key] || "");
+        ta.addEventListener("input", onCellInput);
+        td.appendChild(ta);
         tr.appendChild(td);
       }
       tbody.appendChild(tr);
     }
     table.appendChild(tbody);
     wrap.appendChild(table);
-    fitTimelineColumnWidth();
-  }
-  // 画面の実際の幅に合わせて、年の列がちょうど5列分見えるように幅を計算する
-  function fitTimelineColumnWidth(){
-    var wrap = document.getElementById("timelineWrap");
-    var monthColWidth = 56;
-    var visibleYears = 5;
-    var yearColWidth = Math.floor((wrap.clientWidth - monthColWidth) / visibleYears);
-    if(yearColWidth > 60) wrap.style.setProperty("--timeline-year-w", yearColWidth + "px");
   }
 
   // ---- 連絡先一覧 ----
@@ -3078,7 +3099,6 @@
 
   window.addEventListener("resize", function(){
     if(activeView === "tree") fitTreeOnScreen();
-    if(activeView === "timeline") fitTimelineColumnWidth();
   });
 
   document.getElementById("treePrintBtn").addEventListener("click", printFamilyTree);
@@ -3147,6 +3167,7 @@
         var parsed = JSON.parse(reader.result);
         if(parsed && Array.isArray(parsed.tiers)){
           parsed.tiers.forEach(function(tier){ tier.people = (tier.people || []).map(normalizePerson); });
+          parsed.timelineOverrides = parsed.timelineOverrides || {};
           state = parsed;
           save();
           render();
