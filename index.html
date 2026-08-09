@@ -2295,6 +2295,106 @@
     return [];
   }
 
+  // Googleフォトのデータから自動選定した代表写真(photos/フォルダの実ファイル)。
+  // entryKey(manual_年_月_行番号)ごとに、既定表示する写真の相対パスを持つ。
+  // 気に入らない場合はphotos/フォルダ内の該当ファイルを差し替えれば表示も変わる。
+  var AUTO_PHOTO_DEFAULTS = {
+    "manual_2022_2_0": "photos/p001.jpg",
+    "manual_2022_2_1": "photos/p002.jpg",
+    "manual_2022_2_2": "photos/p003.jpg",
+    "manual_2022_3_0": "photos/p004.jpg",
+    "manual_2022_5_0": "photos/p005.jpg",
+    "manual_2022_5_1": "photos/p006.jpg",
+    "manual_2022_6_0": "photos/p007.jpg",
+    "manual_2022_7_0": "photos/p008.jpg",
+    "manual_2022_8_0": "photos/p009.jpg",
+    "manual_2022_8_1": "photos/p010.jpg",
+    "manual_2022_9_0": "photos/p011.jpg",
+    "manual_2022_9_1": "photos/p012.jpg",
+    "manual_2022_9_2": "photos/p013.jpg",
+    "manual_2022_10_0": "photos/p015.jpg",
+    "manual_2022_11_0": "photos/p016.jpg",
+    "manual_2022_12_0": "photos/p017.jpg",
+    "manual_2022_12_1": "photos/p018.jpg",
+    "manual_2023_1_0": "photos/p019.jpg",
+    "manual_2023_1_1": "photos/p020.jpg",
+    "manual_2023_1_2": "photos/p021.jpg",
+    "manual_2023_2_0": "photos/p022.jpg",
+    "manual_2023_4_0": "photos/p023.jpg",
+    "manual_2023_5_0": "photos/p024.jpg",
+    "manual_2023_5_1": "photos/p025.jpg",
+    "manual_2023_5_2": "photos/p026.jpg",
+    "manual_2023_5_3": "photos/p027.jpg",
+    "manual_2023_5_4": "photos/p028.jpg",
+    "manual_2023_6_0": "photos/p029.jpg",
+    "manual_2023_8_0": "photos/p030.jpg",
+    "manual_2023_8_1": "photos/p031.jpg",
+    "manual_2023_8_2": "photos/p032.jpg",
+    "manual_2023_9_0": "photos/p033.jpg",
+    "manual_2023_10_0": "photos/p034.jpg",
+    "manual_2023_10_1": "photos/p035.jpg",
+    "manual_2023_10_2": "photos/p036.jpg",
+    "manual_2023_10_3": "photos/p037.jpg",
+    "manual_2023_10_4": "photos/p038.jpg",
+    "manual_2023_10_5": "photos/p039.jpg",
+    "manual_2023_10_6": "photos/p040.jpg",
+    "manual_2023_10_7": "photos/p041.jpg",
+    "manual_2023_12_0": "photos/p042.jpg",
+    "manual_2023_12_1": "photos/p043.jpg",
+    "manual_2024_4_0": "photos/p044.jpg",
+    "manual_2024_4_1": "photos/p045.jpg",
+    "manual_2024_4_2": "photos/p046.jpg",
+    "manual_2024_4_3": "photos/p047.jpg",
+    "manual_2024_4_4": "photos/p048.jpg",
+    "manual_2024_5_0": "photos/p049.jpg",
+    "manual_2024_5_1": "photos/p050.jpg",
+    "manual_2024_5_2": "photos/p051.jpg",
+    "manual_2024_5_3": "photos/p052.jpg",
+    "manual_2024_6_0": "photos/p053.jpg",
+    "manual_2024_6_1": "photos/p054.jpg",
+    "manual_2024_7_0": "photos/p055.jpg",
+    "manual_2024_7_1": "photos/p056.jpg",
+    "manual_2024_7_2": "photos/p057.jpg",
+    "manual_2024_8_0": "photos/p058.jpg",
+    "manual_2024_8_1": "photos/p059.jpg",
+    "manual_2024_9_0": "photos/p060.jpg",
+    "manual_2024_9_1": "photos/p061.jpg",
+    "manual_2024_10_0": "photos/p062.jpg",
+    "manual_2024_11_0": "photos/p063.jpg",
+    "manual_2024_11_1": "photos/p064.jpg",
+    "manual_2024_11_2": "photos/p065.jpg",
+    "manual_2024_12_0": "photos/p066.jpg",
+    "manual_2025_2_0": "photos/p067.jpg",
+    "manual_2025_4_1": "photos/p068.jpg",
+    "manual_2025_5_0": "photos/p069.jpg",
+    "manual_2025_5_1": "photos/p070.jpg",
+    "manual_2025_5_2": "photos/p071.jpg",
+    "manual_2025_5_3": "photos/p072.jpg",
+    "manual_2025_6_0": "photos/p073.jpg",
+    "manual_2025_7_0": "photos/p074.jpg",
+    "manual_2025_7_1": "photos/p075.jpg",
+    "manual_2025_8_0": "photos/p076.jpg",
+    "manual_2025_8_1": "photos/p077.jpg",
+    "manual_2025_9_0": "photos/p078.jpg",
+    "manual_2025_9_1": "photos/p079.jpg",
+    "manual_2025_9_2": "photos/p080.jpg",
+    "manual_2025_9_3": "photos/p081.jpg",
+    "manual_2025_10_0": "photos/p082.jpg",
+    "manual_2025_10_1": "photos/p083.jpg",
+    "manual_2025_10_2": "photos/p084.jpg",
+    "manual_2025_11_0": "photos/p085.jpg",
+    "manual_2025_11_1": "photos/p086.jpg",
+    "manual_2025_11_2": "photos/p087.jpg",
+    "manual_2025_11_3": "photos/p088.jpg",
+    "manual_2025_12_0": "photos/p089.jpg",
+    "manual_2026_1_0": "photos/p090.jpg",
+    "manual_2026_1_1": "photos/p091.jpg",
+    "manual_2026_3_0": "photos/p092.jpg",
+    "manual_2026_3_1": "photos/p093.jpg",
+    "manual_2026_5_0": "photos/p094.jpg",
+    "manual_2026_7_1": "photos/p095.jpg"
+  };
+
   // ---- 年表の写真(IndexedDBに保存。localStorageは容量が小さく写真の保存に向かないため) ----
   // 1つの項目に複数枚登録できるよう、写真ごとに自動採番したidで保存し、
   // entryKeyに紐づく写真をまとめて取り出せるようインデックスを張る。
@@ -2368,9 +2468,19 @@
   var currentPhotoIndex = 0;
   var currentPhotoObjectUrl = null;
   var currentPhotoZoom = 1;
+  // 自動写真(photos/フォルダの実ファイル)と、手動でその端末に追加した写真(IndexedDB)を
+  // 1つの一覧にまとめる。自動写真は先頭に置き、id を持たない(削除ボタンの対象外にするため)。
+  function getCombinedPhotos(key){
+    var autoUrl = AUTO_PHOTO_DEFAULTS[key];
+    return getPhotosByEntryKey(key).catch(function(){ return []; }).then(function(photos){
+      var combined = photos.slice();
+      if(autoUrl) combined.unshift({ id: null, url: autoUrl });
+      return combined;
+    });
+  }
   function openTimelinePhoto(key){
     currentPhotoKey = key;
-    getPhotosByEntryKey(key).then(function(photos){
+    getCombinedPhotos(key).then(function(photos){
       if(photos.length){
         currentPhotos = photos;
         currentPhotoIndex = photos.length - 1;
@@ -2390,14 +2500,19 @@
   function renderPhotoModal(){
     var photo = currentPhotos[currentPhotoIndex];
     if(!photo){ closePhotoModal(); return; }
-    if(currentPhotoObjectUrl) URL.revokeObjectURL(currentPhotoObjectUrl);
-    currentPhotoObjectUrl = URL.createObjectURL(photo.blob);
+    if(currentPhotoObjectUrl){ URL.revokeObjectURL(currentPhotoObjectUrl); currentPhotoObjectUrl = null; }
     var img = document.getElementById("photoModalImg");
-    img.src = currentPhotoObjectUrl;
+    if(photo.blob){
+      currentPhotoObjectUrl = URL.createObjectURL(photo.blob);
+      img.src = currentPhotoObjectUrl;
+    }else{
+      img.src = photo.url;
+    }
     img.style.transform = "scale(" + currentPhotoZoom + ")";
     document.getElementById("photoModalCounter").textContent = (currentPhotoIndex + 1) + " / " + currentPhotos.length;
     document.getElementById("photoModalPrevBtn").disabled = currentPhotoIndex <= 0;
     document.getElementById("photoModalNextBtn").disabled = currentPhotoIndex >= currentPhotos.length - 1;
+    document.getElementById("photoModalDeleteBtn").style.display = photo.id ? "" : "none";
   }
   function closePhotoModal(){
     document.getElementById("photoModal").style.display = "none";
@@ -2411,7 +2526,7 @@
     if(!file || !currentPhotoKey) return;
     var key = currentPhotoKey;
     addPhotoBlob(key, file).then(function(){
-      return getPhotosByEntryKey(key);
+      return getCombinedPhotos(key);
     }).then(function(photos){
       currentPhotos = photos;
       currentPhotoIndex = photos.length - 1;
@@ -2425,11 +2540,12 @@
   });
   document.getElementById("photoModalDeleteBtn").addEventListener("click", function(){
     if(!currentPhotos.length) return;
-    if(!window.confirm("この写真を削除しますか？")) return;
     var id = currentPhotos[currentPhotoIndex].id;
+    if(!id) return; // 自動写真はファイルの差し替えでのみ変更できる
+    if(!window.confirm("この写真を削除しますか？")) return;
     var key = currentPhotoKey;
     deletePhotoById(id).then(function(){
-      return getPhotosByEntryKey(key);
+      return getCombinedPhotos(key);
     }).then(function(photos){
       currentPhotos = photos;
       if(!photos.length){ closePhotoModal(); return; }
