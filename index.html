@@ -2390,7 +2390,7 @@
     "manual_2023_12_1": "photos/p043.jpg",
     "manual_2024_4_0": "photos/p044.jpg",
     "manual_2024_4_1": "photos/p045.jpg",
-    "manual_2024_4_2": ["photos/p097.jpg", "photos/p096.jpg", "photos/p047.jpg", "photos/p048.jpg", "photos/p049.jpg", "photos/p046.jpg"],
+    "manual_2024_4_2": ["photos/p096.jpg", "photos/p097.jpg", "photos/p047.jpg", "photos/p048.jpg", "photos/p049.jpg", "photos/p046.jpg"],
     "manual_2024_5_0": "photos/p050.jpg",
     "manual_2024_5_1": "photos/p051.jpg",
     "manual_2024_5_2": "photos/p052.jpg",
@@ -2437,6 +2437,12 @@
     "manual_2026_3_1": "photos/p093.jpg",
     "manual_2026_5_0": "photos/p094.jpg",
     "manual_2026_7_1": "photos/p095.jpg"
+  };
+  // アイコンをタップして最初に開いた時に表示する写真の番号(配列内でのインデックス)。
+  // 指定のない項目は0番目(先頭)を表示する。メモの行ジャンプは配列の並び順そのままを使うため、
+  // 「最初に開いた時に見せたい写真」と「特定の行から飛ばしたい写真」が違う場合はここで調整する。
+  var AUTO_PHOTO_START_INDEX = {
+    "manual_2024_4_2": 1
   };
 
   // ---- 年表の写真(IndexedDBに保存。localStorageは容量が小さく写真の保存に向かないため) ----
@@ -2550,7 +2556,7 @@
     currentPhotoKey = key;
     getCombinedPhotos(key).then(function(photos){
       currentPhotos = photos;
-      currentPhotoIndex = 0;
+      currentPhotoIndex = Math.min(AUTO_PHOTO_START_INDEX[key] || 0, Math.max(0, photos.length - 1));
       showPhotoModal();
     }).catch(function(){
       window.alert("この端末・ブラウザでは写真の保存機能が使えないようです。");
