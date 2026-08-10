@@ -2302,7 +2302,7 @@
     "manual_2022_2_0": "photos/p001.jpg",
     "manual_2022_2_1": "photos/p002.jpg",
     "manual_2022_2_2": "photos/p003.jpg",
-    "manual_2022_3_0": "photos/p004.jpg",
+    "manual_2022_3_0": ["photos/p004a.jpg", "photos/p004b.jpg"],
     "manual_2022_5_0": "photos/p005.jpg",
     "manual_2022_5_1": "photos/p006.jpg",
     "manual_2022_6_0": "photos/p007.jpg",
@@ -2471,11 +2471,11 @@
   // 自動写真(photos/フォルダの実ファイル)と、手動でその端末に追加した写真(IndexedDB)を
   // 1つの一覧にまとめる。自動写真は先頭に置き、id を持たない(削除ボタンの対象外にするため)。
   function getCombinedPhotos(key){
-    var autoUrl = AUTO_PHOTO_DEFAULTS[key];
+    var autoVal = AUTO_PHOTO_DEFAULTS[key];
+    var autoUrls = autoVal ? (Array.isArray(autoVal) ? autoVal : [autoVal]) : [];
     return getPhotosByEntryKey(key).catch(function(){ return []; }).then(function(photos){
-      var combined = photos.slice();
-      if(autoUrl) combined.unshift({ id: null, url: autoUrl });
-      return combined;
+      var autoPhotos = autoUrls.map(function(u){ return { id: null, url: u }; });
+      return autoPhotos.concat(photos);
     });
   }
   function openTimelinePhoto(key){
