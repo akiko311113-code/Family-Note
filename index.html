@@ -859,6 +859,31 @@
     resize: vertical;
   }
   .photo-modal-desc:focus{ outline: none; border-color: var(--accent); }
+  .photo-modal-desc-display{
+    min-height: 2.6em;
+    padding: 8px 10px;
+    border: 1px solid transparent;
+    border-radius: 6px;
+    font-size: 14.5px;
+    line-height: 1.7;
+    cursor: text;
+    white-space: pre-wrap;
+  }
+  .photo-modal-desc-display:hover{ background: var(--surface-2); border-color: var(--line); }
+  .photo-modal-desc-display:empty::before{ content: "(タップして書き込む)"; color: var(--ink-soft); }
+  .photo-modal-desc-line{ display: flex; align-items: baseline; gap: 6px; }
+  .photo-modal-desc-jump{
+    flex: 0 0 auto;
+    border: none;
+    background: var(--accent-soft);
+    color: var(--accent-ink);
+    font-size: 11px;
+    line-height: 1;
+    padding: 3px 5px;
+    border-radius: 4px;
+    cursor: pointer;
+  }
+  .photo-modal-desc-jump:hover{ opacity: 0.8; }
   .photo-modal-viewport.is-empty{ min-height: 160px; }
 
   /* ---------- family tree ---------- */
@@ -1060,8 +1085,9 @@
         <button type="button" class="btn btn-ghost" id="photoModalNextBtn">次へ ▶</button>
       </div>
       <div class="photo-modal-desc-wrap">
-        <label class="photo-modal-desc-label" for="photoModalDesc">詳しいメモ(この端末だけに保存されます)</label>
-        <textarea id="photoModalDesc" class="photo-modal-desc" rows="4" placeholder="旅行の詳しい内容などを自由に書き込めます"></textarea>
+        <label class="photo-modal-desc-label">詳しいメモ(この端末だけに保存されます) - 行頭の▶をタップするとその行の写真が表示されます</label>
+        <div id="photoModalDescDisplay" class="photo-modal-desc-display" tabindex="0"></div>
+        <textarea id="photoModalDescEdit" class="photo-modal-desc" rows="4" placeholder="旅行の詳しい内容などを自由に書き込めます(1行ごとに、対応する写真にジャンプできます)" style="display:none;"></textarea>
       </div>
       <div class="photo-modal-actions">
         <button type="button" class="btn btn-ghost" id="photoModalZoomOutBtn">縮小 −</button>
@@ -2563,28 +2589,75 @@
     document.getElementById("photoModalNextBtn").disabled = currentPhotoIndex >= currentPhotos.length - 1;
     document.getElementById("photoModalDeleteBtn").style.display = photo.id ? "" : "none";
   }
+  var currentDescText = "";
   function loadDescriptionIntoModal(){
     var key = currentPhotoKey;
-    var ta = document.getElementById("photoModalDesc");
-    ta.value = "";
+    currentDescText = "";
+    renderDescDisplay();
     getDescription(key).then(function(text){
       if(currentPhotoKey !== key) return; // その間にモーダルが閉じた/切り替わった場合は反映しない
-      ta.value = text || "";
+      currentDescText = text || "";
+      renderDescDisplay();
     }).catch(function(){});
   }
+  // メモを行ごとに分け、各行の先頭に「▶」ボタンを付ける。押すと、その行と同じ順番の
+  // 写真(1行目→1枚目、2行目→2枚目…)にジャンプする。写真の数より行が多い場合は最後の写真を表示する。
+  function renderDescDisplay(){
+    var box = document.getElementById("photoModalDescDisplay");
+    box.innerHTML = "";
+    var lines = currentDescText.split("\n");
+    lines.forEach(function(line, idx){
+      if(!line.trim()) return;
+      var row = document.createElement("div");
+      row.className = "photo-modal-desc-line";
+      if(currentPhotos.length){
+        var jumpBtn = document.createElement("button");
+        jumpBtn.type = "button";
+        jumpBtn.className = "photo-modal-desc-jump";
+        jumpBtn.textContent = "▶";
+        jumpBtn.title = "この行の写真を表示";
+        jumpBtn.addEventListener("click", function(ev){
+          ev.stopPropagation();
+          currentPhotoIndex = Math.min(idx, currentPhotos.length - 1);
+          currentPhotoZoom = 1;
+          renderPhotoModal();
+        });
+        row.appendChild(jumpBtn);
+      }
+      row.appendChild(document.createTextNode(line));
+      box.appendChild(row);
+    });
+  }
+  function showDescEditor(){
+    var ta = document.getElementById("photoModalDescEdit");
+    document.getElementById("photoModalDescDisplay").style.display = "none";
+    ta.style.display = "";
+    ta.value = currentDescText;
+    ta.focus();
+  }
+  function showDescDisplay(){
+    document.getElementById("photoModalDescEdit").style.display = "none";
+    document.getElementById("photoModalDescDisplay").style.display = "";
+    renderDescDisplay();
+  }
+  document.getElementById("photoModalDescDisplay").addEventListener("click", showDescEditor);
   var descSaveTimer = null;
-  document.getElementById("photoModalDesc").addEventListener("input", function(e){
+  document.getElementById("photoModalDescEdit").addEventListener("input", function(e){
     var key = currentPhotoKey;
     var text = e.target.value;
+    currentDescText = text;
     if(!key) return;
     clearTimeout(descSaveTimer);
     descSaveTimer = setTimeout(function(){ setDescription(key, text); }, 400);
   });
+  document.getElementById("photoModalDescEdit").addEventListener("blur", showDescDisplay);
   function closePhotoModal(){
     document.getElementById("photoModal").style.display = "none";
     if(currentPhotoObjectUrl){ URL.revokeObjectURL(currentPhotoObjectUrl); currentPhotoObjectUrl = null; }
     currentPhotoKey = null;
     currentPhotos = [];
+    document.getElementById("photoModalDescEdit").style.display = "none";
+    document.getElementById("photoModalDescDisplay").style.display = "";
   }
   document.getElementById("timelinePhotoFile").addEventListener("change", function(e){
     var file = e.target.files[0];
