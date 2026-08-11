@@ -885,6 +885,17 @@
   }
   .photo-modal-desc-jump:hover{ opacity: 0.8; }
   .photo-modal-viewport.is-empty{ min-height: 160px; }
+  .photo-modal-gallery-links{ display: flex; flex-wrap: wrap; gap: 8px; }
+  .photo-modal-gallery-link{
+    font-size: 13px;
+    padding: 5px 10px;
+    border-radius: 999px;
+    border: 1px solid var(--accent);
+    background: var(--accent-soft);
+    color: var(--accent-ink);
+    text-decoration: none;
+  }
+  .photo-modal-gallery-link:hover{ opacity: 0.85; }
 
   /* ---------- family tree ---------- */
   .tree-section{ margin-bottom: 30px; }
@@ -1089,6 +1100,7 @@
         <div id="photoModalDescDisplay" class="photo-modal-desc-display" tabindex="0"></div>
         <textarea id="photoModalDescEdit" class="photo-modal-desc" rows="4" placeholder="旅行の詳しい内容などを自由に書き込めます(1行ごとに、対応する写真にジャンプできます)" style="display:none;"></textarea>
       </div>
+      <div id="photoModalGalleryLinks" class="photo-modal-gallery-links" style="display:none;"></div>
       <div class="photo-modal-actions">
         <button type="button" class="btn btn-ghost" id="photoModalZoomOutBtn">縮小 −</button>
         <button type="button" class="btn btn-ghost" id="photoModalZoomInBtn">拡大 ＋</button>
@@ -2390,7 +2402,7 @@
     "manual_2023_12_1": "photos/p043.jpg",
     "manual_2024_4_0": "photos/p044.jpg",
     "manual_2024_4_1": "photos/p045.jpg",
-    "manual_2024_4_2": ["photos/p097.jpg", "photos/p096.jpg", "photos/p047.jpg", "photos/p048.jpg", "photos/p049.jpg"],
+    "manual_2024_4_2": ["photos/p097.jpg", "photos/p096.jpg", "photos/p098.jpg", "photos/p048.jpg", "photos/p049.jpg"],
     "manual_2024_5_0": "photos/p050.jpg",
     "manual_2024_5_1": "photos/p051.jpg",
     "manual_2024_5_2": "photos/p052.jpg",
@@ -2446,6 +2458,14 @@
   // 指定のない項目・行は、そのままの並び順(1行目→配列0番目)を使う。
   var AUTO_PHOTO_LINE_JUMP = {
     "manual_2024_4_2": [1, 2, 3, 4]
+  };
+  // 項目ごとに、その場で作った「候補写真ギャラリー」(Google Photosの全候補一覧)へのリンク。
+  // 登録があるものだけ、写真ポップアップに「候補を見る」ボタンとして表示する。
+  var AUTO_PHOTO_GALLERIES = {
+    "manual_2024_4_2": [
+      { label: "タシュケントの候補を見る", url: "https://claude.ai/code/artifact/03df01e3-9ff0-40c6-8546-cc2630a84d82" },
+      { label: "サマルカンドの候補を見る", url: "https://claude.ai/code/artifact/c47a0fe6-04a0-4cf7-8b04-87bb87b77189" }
+    ]
   };
 
   // ---- 年表の写真(IndexedDBに保存。localStorageは容量が小さく写真の保存に向かないため) ----
@@ -2570,6 +2590,23 @@
     document.getElementById("photoModal").style.display = "flex";
     renderPhotoModal();
     loadDescriptionIntoModal();
+    renderGalleryLinks();
+  }
+  function renderGalleryLinks(){
+    var wrap = document.getElementById("photoModalGalleryLinks");
+    wrap.innerHTML = "";
+    var galleries = AUTO_PHOTO_GALLERIES[currentPhotoKey];
+    if(!galleries || !galleries.length){ wrap.style.display = "none"; return; }
+    wrap.style.display = "";
+    galleries.forEach(function(g){
+      var a = document.createElement("a");
+      a.className = "photo-modal-gallery-link";
+      a.href = g.url;
+      a.target = "_blank";
+      a.rel = "noopener";
+      a.textContent = g.label;
+      wrap.appendChild(a);
+    });
   }
   function renderPhotoModal(){
     var photo = currentPhotos[currentPhotoIndex];
