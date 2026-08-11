@@ -2390,7 +2390,7 @@
     "manual_2023_12_1": "photos/p043.jpg",
     "manual_2024_4_0": "photos/p044.jpg",
     "manual_2024_4_1": "photos/p045.jpg",
-    "manual_2024_4_2": ["photos/p096.jpg", "photos/p097.jpg", "photos/p047.jpg", "photos/p048.jpg", "photos/p049.jpg", "photos/p046.jpg"],
+    "manual_2024_4_2": ["photos/p097.jpg", "photos/p096.jpg", "photos/p047.jpg", "photos/p048.jpg", "photos/p049.jpg"],
     "manual_2024_5_0": "photos/p050.jpg",
     "manual_2024_5_1": "photos/p051.jpg",
     "manual_2024_5_2": "photos/p052.jpg",
@@ -2439,10 +2439,13 @@
     "manual_2026_7_1": "photos/p095.jpg"
   };
   // アイコンをタップして最初に開いた時に表示する写真の番号(配列内でのインデックス)。
-  // 指定のない項目は0番目(先頭)を表示する。メモの行ジャンプは配列の並び順そのままを使うため、
-  // 「最初に開いた時に見せたい写真」と「特定の行から飛ばしたい写真」が違う場合はここで調整する。
-  var AUTO_PHOTO_START_INDEX = {
-    "manual_2024_4_2": 1
+  // 指定のない項目は0番目(先頭)を表示する。
+  var AUTO_PHOTO_START_INDEX = {};
+  // メモの行ごとのジャンプ先を、配列のインデックスそのままではなく個別に指定したい場合に使う。
+  // 例: [1,2,3,4] は「1行目は配列の1番目(0始まり)、2行目は2番目…」という意味。
+  // 指定のない項目・行は、そのままの並び順(1行目→配列0番目)を使う。
+  var AUTO_PHOTO_LINE_JUMP = {
+    "manual_2024_4_2": [1, 2, 3, 4]
   };
 
   // ---- 年表の写真(IndexedDBに保存。localStorageは容量が小さく写真の保存に向かないため) ----
@@ -2624,7 +2627,9 @@
         jumpBtn.title = "この行の写真を表示";
         jumpBtn.addEventListener("click", function(ev){
           ev.stopPropagation();
-          currentPhotoIndex = Math.min(idx, currentPhotos.length - 1);
+          var jumpMap = AUTO_PHOTO_LINE_JUMP[currentPhotoKey];
+          var targetIdx = (jumpMap && jumpMap[idx] !== undefined) ? jumpMap[idx] : idx;
+          currentPhotoIndex = Math.min(targetIdx, currentPhotos.length - 1);
           currentPhotoZoom = 1;
           renderPhotoModal();
         });
