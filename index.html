@@ -1720,27 +1720,6 @@
       tools.appendChild(stepBadge);
     }
 
-    var hideLabel = document.createElement("label");
-    hideLabel.className = "deceased-checkbox";
-    var hideCb = document.createElement("input");
-    hideCb.type = "checkbox";
-    hideCb.checked = !!person.hideInTree;
-    hideCb.addEventListener("change", function(){
-      person.hideInTree = hideCb.checked;
-      save();
-      render();
-    });
-    hideLabel.appendChild(hideCb);
-    hideLabel.appendChild(document.createTextNode("家系図に表示しない"));
-    tools.appendChild(hideLabel);
-
-    if(person.hideInTree){
-      var hideBadge = document.createElement("span");
-      hideBadge.className = "deceased-badge";
-      hideBadge.textContent = "(家系図非表示)";
-      tools.appendChild(hideBadge);
-    }
-
     var hideBirthdayLabel = document.createElement("label");
     hideBirthdayLabel.className = "deceased-checkbox";
     var hideBirthdayCb = document.createElement("input");
@@ -1760,6 +1739,27 @@
       hideBirthdayBadge.className = "deceased-badge";
       hideBirthdayBadge.textContent = "(誕生日非表示)";
       tools.appendChild(hideBirthdayBadge);
+    }
+
+    var hideLabel = document.createElement("label");
+    hideLabel.className = "deceased-checkbox";
+    var hideCb = document.createElement("input");
+    hideCb.type = "checkbox";
+    hideCb.checked = !!person.hideInTree;
+    hideCb.addEventListener("change", function(){
+      person.hideInTree = hideCb.checked;
+      save();
+      render();
+    });
+    hideLabel.appendChild(hideCb);
+    hideLabel.appendChild(document.createTextNode("家系図に表示しない"));
+    tools.appendChild(hideLabel);
+
+    if(person.hideInTree){
+      var hideBadge = document.createElement("span");
+      hideBadge.className = "deceased-badge";
+      hideBadge.textContent = "(家系図非表示)";
+      tools.appendChild(hideBadge);
     }
 
     var timelineLabel = document.createElement("label");
