@@ -1158,6 +1158,9 @@
       { key: "niblings", label: "甥・姪", people: [
         newPerson("夫の兄弟の子")
       ]},
+      { key: "niblingsSpouses", label: "甥・姪の配偶者", people: [
+        newPerson("")
+      ]},
       { key: "spouseParents", label: "子の配偶者の親", people: [
         newPerson("長男の妻の父")
       ]},
@@ -1252,6 +1255,7 @@
     ensureTier("siblings", "兄弟姉妹", function(){ return [ newPerson("夫の兄弟"), newPerson("妻の兄弟") ]; }, "parents");
     ensureTier("siblingsSpouses", "兄弟姉妹の配偶者", function(){ return [ newPerson("") ]; }, "siblings");
     ensureTier("niblings", "甥・姪", function(){ return [ newPerson("夫の兄弟の子") ]; }, "siblingsSpouses");
+    ensureTier("niblingsSpouses", "甥・姪の配偶者", function(){ return [ newPerson("") ]; }, "niblings");
     ensureTier("relatives", "親族", function(){ return [ newPerson("") ]; }, "spouseParents");
     ensureTier("others", "その他", function(){ return [ newPerson("") ]; }, "relatives");
 
@@ -3444,7 +3448,7 @@
   }
 
   // 両親 → (兄弟姉妹+本人)のミニ系統(夫方・妻方それぞれ)。甥・姪があれば各兄弟の下に線で結ぶ。
-  function buildAncestorSide(parentList, siblingsBefore, selfPerson, siblingsAfter, siblingSpouseLookup, niblingLookup, pendingLines, container){
+  function buildAncestorSide(parentList, siblingsBefore, selfPerson, siblingsAfter, siblingSpouseLookup, niblingLookup, niblingSpouseLookup, pendingLines, container){
     if(!selfPerson) return null;
     var stack = document.createElement("div");
     stack.className = "side-stack";
@@ -3466,7 +3470,15 @@
       if(!isSelf){
         var nibs = niblingLookup(p);
         if(nibs.length){
-          var nibUnits = nibs.map(function(n){ var u = makeUnit(n, null); u.dashed = !!n.step; return u; });
+          var nibUnits = nibs.map(function(n){
+            var nSpouse = niblingSpouseLookup(n);
+            var u = makeUnit(n, nSpouse);
+            u.dashed = !!n.step;
+            if(nSpouse){
+              pendingLines.push(function(){ ensureCoupleTie(container, u.cards); });
+            }
+            return u;
+          });
           var below = unitsRow(nibUnits, "sub-row-below");
           var below_stack = document.createElement("div");
           below_stack.className = "unit-stack";
@@ -3528,6 +3540,18 @@
       return out;
     }
 
+    var niblingsSpousesAll = namedPeople("niblingsSpouses");
+    var usedNiblingSpouseIdx = [];
+    function niblingSpouseLookup(nibling){
+      if(!nibling.relation) return null;
+      var idx = -1;
+      niblingsSpousesAll.forEach(function(s, i){
+        if(idx === -1 && usedNiblingSpouseIdx.indexOf(i) === -1 && s.relation && s.relation.indexOf(nibling.relation) === 0) idx = i;
+      });
+      if(idx >= 0){ usedNiblingSpouseIdx.push(idx); return niblingsSpousesAll[idx]; }
+      return null;
+    }
+
     var selfRaw = tierByKey("self").people;
     var selfP0 = selfRaw[0], selfP1 = selfRaw[1];
     var selfP0Named = !!(selfP0 && selfP0.name.trim() && !selfP0.hideInTree);
@@ -3586,8 +3610,8 @@
     }
 
     // 夫方・妻方それぞれ: 両親 → (兄弟姉妹を含めた)本人。本人同士が隣り合うよう夫方を左・妻方を右に置く
-    var husbandSide = buildAncestorSide(pHusband, sHusband, husbandPerson, [], siblingSpouseLookup, matchedNiblings, pendingLines, container);
-    var wifeSide = buildAncestorSide(pWife, [], wifePerson, sWife, siblingSpouseLookup, matchedNiblings, pendingLines, container);
+    var husbandSide = buildAncestorSide(pHusband, sHusband, husbandPerson, [], siblingSpouseLookup, matchedNiblings, niblingSpouseLookup, pendingLines, container);
+    var wifeSide = buildAncestorSide(pWife, [], wifePerson, sWife, siblingSpouseLookup, matchedNiblings, niblingSpouseLookup, pendingLines, container);
 
     var ancestorRow = document.createElement("div");
     ancestorRow.className = "ancestor-row";
@@ -3695,6 +3719,9 @@
     var unmatchedSibSpouses = siblingSpousesAll.filter(function(s, i){ return usedSibSpouseIdx.indexOf(i) === -1; });
     var otherSibSpouseCluster = clusterGroup(unmatchedSibSpouses, "兄弟姉妹の配偶者(対応する兄弟姉妹が不明)");
     if(otherSibSpouseCluster){ otherSibSpouseCluster.classList.add("tree-inlaw"); extraRow.appendChild(otherSibSpouseCluster); }
+    var unmatchedNiblingSpouses = niblingsSpousesAll.filter(function(s, i){ return usedNiblingSpouseIdx.indexOf(i) === -1; });
+    var nibSpouseCluster = clusterGroup(unmatchedNiblingSpouses, "甥・姪の配偶者(対応する甥・姪が不明)");
+    if(nibSpouseCluster){ nibSpouseCluster.classList.add("tree-inlaw"); extraRow.appendChild(nibSpouseCluster); }
 
     if(ancestorRow.children.length) container.appendChild(ancestorRow);
     if(childrenRow) container.appendChild(childrenRow);
