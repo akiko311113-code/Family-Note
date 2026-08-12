@@ -1766,14 +1766,16 @@
     timelineLabel.className = "deceased-checkbox";
     var timelineCb = document.createElement("input");
     timelineCb.type = "checkbox";
-    timelineCb.checked = !!person.showInTimeline;
+    // データ上はshowInTimeline(true=表示)のまま、表示上は他の2つのチェックボックスと同じ
+    // 「〜に表示しない」の言い方・向きに揃えている(チェック=表示しない)。
+    timelineCb.checked = !person.showInTimeline;
     timelineCb.addEventListener("change", function(){
-      person.showInTimeline = timelineCb.checked;
+      person.showInTimeline = !timelineCb.checked;
       save();
       render();
     });
     timelineLabel.appendChild(timelineCb);
-    timelineLabel.appendChild(document.createTextNode("年表に表示する"));
+    timelineLabel.appendChild(document.createTextNode("年表に表示しない"));
     tools.appendChild(timelineLabel);
 
     var curIdx = tier.people.indexOf(person);
