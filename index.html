@@ -2453,7 +2453,8 @@
     "manual_2025_11_2": "photos/p087.jpg",
     "manual_2025_11_3": "photos/p088.jpg",
     "manual_2025_12_0": ["photos/p103.jpg", "photos/p111.jpg", "photos/p105.jpg", "photos/p106.jpg", "photos/p107.jpg", "photos/p108.jpg", "photos/p109.jpg", "photos/p112.jpg"],
-    "manual_2026_1_0": "photos/p091.jpg",
+    "manual_2026_1_0": ["photos/p103.jpg", "photos/p111.jpg", "photos/p105.jpg", "photos/p106.jpg", "photos/p107.jpg", "photos/p108.jpg", "photos/p109.jpg", "photos/p112.jpg"],
+    "manual_2026_1_1": "photos/p091.jpg",
     "manual_2026_3_0": "photos/p092.jpg",
     "manual_2026_3_1": "photos/p093.jpg",
     "manual_2026_5_0": "photos/p094.jpg"
@@ -2469,6 +2470,14 @@
   };
   // 項目ごとに、その場で作った「候補写真ギャラリー」(Google Photosの全候補一覧)へのリンク。
   // 登録があるものだけ、写真ポップアップに「候補を見る」ボタンとして表示する。
+  var US_TRIP_GALLERY_LINKS = [
+    { label: "12/27 サンタクララをGoogleフォトで見る(現地日付)", url: "https://photos.google.com/search/2025%E5%B9%B412%E6%9C%8827%E6%97%A5" },
+    { label: "12/28 サンフランシスコをGoogleフォトで見る(現地日付)", url: "https://photos.google.com/search/2025%E5%B9%B412%E6%9C%8828%E6%97%A5" },
+    { label: "12/29 ワインカントリーをGoogleフォトで見る(現地日付)", url: "https://photos.google.com/search/2025%E5%B9%B412%E6%9C%8829%E6%97%A5" },
+    { label: "12/30 ゲルンビルをGoogleフォトで見る(現地日付)", url: "https://photos.google.com/search/2025%E5%B9%B412%E6%9C%8830%E6%97%A5" },
+    { label: "1/1 サニーベールをGoogleフォトで見る(現地日付)", url: "https://photos.google.com/search/2026%E5%B9%B41%E6%9C%881%E6%97%A5" },
+    { label: "1/2 サンタクララをGoogleフォトで見る(現地日付)", url: "https://photos.google.com/search/2026%E5%B9%B41%E6%9C%882%E6%97%A5" }
+  ];
   var AUTO_PHOTO_GALLERIES = {
     "manual_2024_4_2": [
       { label: "タシュケントの候補を見る", url: "https://claude.ai/code/artifact/03df01e3-9ff0-40c6-8546-cc2630a84d82" },
@@ -2476,14 +2485,8 @@
       { label: "ブハラの候補を見る", url: "https://claude.ai/code/artifact/e24bc092-8a65-4340-9caa-a71c65b12471" },
       { label: "タシュケント州(チムガン)の候補を見る", url: "https://claude.ai/code/artifact/759238ed-f279-4413-a2e8-f1e275fb139b" }
     ],
-    "manual_2025_12_0": [
-      { label: "12/27 サンタクララをGoogleフォトで見る(現地日付)", url: "https://photos.google.com/search/2025%E5%B9%B412%E6%9C%8827%E6%97%A5" },
-      { label: "12/28 サンフランシスコをGoogleフォトで見る(現地日付)", url: "https://photos.google.com/search/2025%E5%B9%B412%E6%9C%8828%E6%97%A5" },
-      { label: "12/29 ワインカントリーをGoogleフォトで見る(現地日付)", url: "https://photos.google.com/search/2025%E5%B9%B412%E6%9C%8829%E6%97%A5" },
-      { label: "12/30 ゲルンビルをGoogleフォトで見る(現地日付)", url: "https://photos.google.com/search/2025%E5%B9%B412%E6%9C%8830%E6%97%A5" },
-      { label: "1/1 サニーベールをGoogleフォトで見る(現地日付)", url: "https://photos.google.com/search/2026%E5%B9%B41%E6%9C%881%E6%97%A5" },
-      { label: "1/2 サンタクララをGoogleフォトで見る(現地日付)", url: "https://photos.google.com/search/2026%E5%B9%B41%E6%9C%882%E6%97%A5" }
-    ]
+    "manual_2025_12_0": US_TRIP_GALLERY_LINKS,
+    "manual_2026_1_0": US_TRIP_GALLERY_LINKS
   };
 
   // ---- 年表の写真(IndexedDBに保存。localStorageは容量が小さく写真の保存に向かないため) ----
