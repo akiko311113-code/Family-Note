@@ -930,7 +930,7 @@
   .tree-card.is-step .tc-name{ color: var(--ink-soft); font-weight: 400; opacity: 0.8; }
   /* word-break:keep-all で、間にスペースのない「6歳」のような数字+単位のかたまりを改行させない。
      区切りに使っている「・」の前後にはスペースがあるので、そこでは自然に折り返せる。 */
-  .tc-sub{ font-family: var(--sans); font-size: 12px; color: var(--ink-soft); white-space: normal; word-break: keep-all; margin-top: 1px; }
+  .tc-sub{ font-family: var(--sans); font-size: 12px; color: var(--ink-soft); white-space: normal; word-break: keep-all; overflow-wrap: break-word; margin-top: 1px; }
   .tc-altname{ font-family: var(--sans); font-size: 11.5px; font-style: italic; color: var(--ink-soft); white-space: normal; overflow-wrap: break-word; }
   .tree-note{ font-size: 14px; color: var(--ink-soft); margin-top: 10px; }
 
