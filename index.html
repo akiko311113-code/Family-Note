@@ -256,11 +256,15 @@
     font-weight: 700;
     padding: 10px 20px;
     border-radius: 999px;
+    border: none;
     text-decoration: none;
     color: #fff;
     background: #2e8b57;
+    font-family: var(--sans);
+    cursor: pointer;
   }
   .birthday-send-btn.is-line{ background: #06c755; }
+  .birthday-send-btn.is-copy{ background: var(--accent); }
 
   .birthday-msg-settings{
     margin-top: 24px;
@@ -1004,8 +1008,9 @@
       <h2 class="birthday-msg-title">誕生日メッセージの設定</h2>
       <p class="birthday-msg-note">
         このアプリはサーバーを持たないため、決まった時刻に操作なしで自動送信することはできません。
-        誕生日の方の欄にある「SMSで送る」ボタンを押すと、その方の携帯電話宛にメッセージが入力された状態でSMSアプリが開きます。
+        誕生日の方の欄にある「SMSで送る」ボタンを押すと、その方の携帯電話宛にSMSアプリが開きます（iPhoneではAppleの仕様上、メッセージが自動で入力されないことがあります）。
         「LINEで送る」ボタンを押すと、メッセージが入力された状態でLINEアプリが開きますが、LINEの仕組み上、送り先（お相手）はLINEの画面でご自身で選ぶ必要があります。
+        自動でメッセージが入らなかった場合は、「📋 メッセージをコピー」でコピーしてから、SMSやLINEの入力欄に貼り付けてください。
         いずれも、最後の送信だけご自身で行ってください。
       </p>
 
@@ -2206,6 +2211,26 @@
             lineBtn.rel = "noopener";
             lineBtn.textContent = "💬 LINEで送る";
             sendWrap.appendChild(lineBtn);
+            var copyBtn = document.createElement("button");
+            copyBtn.type = "button";
+            copyBtn.className = "birthday-send-btn is-copy";
+            copyBtn.textContent = "📋 メッセージをコピー";
+            copyBtn.addEventListener("click", function(){
+              var text = msgText;
+              var done = function(){
+                var orig = copyBtn.textContent;
+                copyBtn.textContent = "コピーしました";
+                setTimeout(function(){ copyBtn.textContent = orig; }, 1500);
+              };
+              if(navigator.clipboard && navigator.clipboard.writeText){
+                navigator.clipboard.writeText(text).then(done).catch(function(){
+                  window.alert("コピーできませんでした。お手数ですが文章を選んで手動でコピーしてください。");
+                });
+              }else{
+                window.alert("コピーできませんでした。お手数ですが文章を選んで手動でコピーしてください。");
+              }
+            });
+            sendWrap.appendChild(copyBtn);
             row.appendChild(sendWrap);
           }
         }
@@ -3094,7 +3119,7 @@
     return "sms:" + digits + "?body=" + encodeURIComponent(body);
   }
   function lineHref(body){
-    return "https://line.me/R/msg/text/?" + encodeURIComponent(body);
+    return "https://line.me/R/msg/text/" + encodeURIComponent(body);
   }
   function fillBirthdayMsgTemplate(template, name, age){
     return String(template || "")
