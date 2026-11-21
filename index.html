@@ -2709,6 +2709,10 @@
       window.alert("GoogleフォトのURL(photos.app.goo.gl または photos.google.com)か、日付(例: 2025-12-30)を入力してください。");
       return;
     }
+    // 日付から作った検索リンクは、登録と同時にその場でGoogleフォトも開く(保存を待つとポップアップ扱いで止められることがあるため、先に開く)
+    if(link.indexOf("https://photos.google.com/search/") === 0){
+      window.open(link, "_blank", "noopener");
+    }
     var key = currentPhotoKey;
     addPhotoLink(key, link).then(function(){
       return getCombinedPhotos(key);
