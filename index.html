@@ -1094,8 +1094,8 @@
   <div id="photoLinkDialog" class="photo-modal" style="display:none; z-index:60;">
     <div class="photo-modal-backdrop" id="photoLinkBackdrop"></div>
     <div class="photo-modal-inner" style="width:min(92vw, 420px);">
-      <label class="photo-modal-desc-label" for="photoLinkInput">GoogleフォトのURLを貼り付けるか、日付を入力してください。日付(例: 2025-12-30)を入れてOKを押すと、その日の写真がすぐ開きます。</label>
-      <input type="text" id="photoLinkInput" class="field" placeholder="2025-12-30 または https://photos.app.goo.gl/...">
+      <label class="photo-modal-desc-label" for="photoLinkInput">日付を入力してください。OKを押すと、その日の写真がGoogle Photosですぐ開きます。</label>
+      <input type="text" id="photoLinkInput" class="field" placeholder="例: 2025-12-30">
       <div id="photoLinkError" style="color:var(--danger); font-size:13px;"></div>
       <div class="photo-modal-actions">
         <span class="spacer"></span>
@@ -1127,7 +1127,7 @@
         <button type="button" class="btn btn-ghost" id="photoModalZoomInBtn">拡大 ＋</button>
         <span class="spacer"></span>
         <button type="button" class="btn" id="photoModalAddBtn">写真を追加</button>
-        <button type="button" class="btn" id="photoModalAddLinkBtn">Googleフォトのリンクを追加</button>
+        <button type="button" class="btn" id="photoModalAddLinkBtn">Google Photosを日付で開く</button>
         <button type="button" class="btn btn-ghost" id="photoModalDeleteBtn">削除</button>
         <button type="button" class="btn" id="photoModalCloseBtn">閉じる</button>
       </div>
@@ -2736,8 +2736,8 @@
     var input = document.getElementById("photoLinkInput").value;
     if(!input.trim()) return;
     var link = normalizeGooglePhotosLink(input);
-    if(!link){
-      document.getElementById("photoLinkError").textContent = "GoogleフォトのURL(photos.app.goo.gl または photos.google.com)か、日付(例: 2025-12-30)を入力してください。";
+    if(!link || link.indexOf("https://photos.google.com/search/") !== 0){
+      document.getElementById("photoLinkError").textContent = "日付を入力してください(例: 2025-12-30 / 2025年12月30日)。";
       return;
     }
     closePhotoLinkDialog();
