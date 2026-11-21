@@ -2842,6 +2842,8 @@
     });
     return box;
   }
+  var timelineFutureYears = 0;     // 今年より先に追加表示している年数(5年ずつ増える)
+  var timelineKeepScroll = null;
   function renderTimeline(){
     var headWrap = document.getElementById("timelineHeadWrap");
     var wrap = document.getElementById("timelineWrap");
@@ -2849,7 +2851,9 @@
     wrap.innerHTML = "";
     var entries = collectTimelineEntries();
     var startYear = 1951;
-    var endYear = Math.max(startYear, new Date().getFullYear());
+    var endYear = Math.max(startYear, new Date().getFullYear() + timelineFutureYears);
+    var keepScroll = timelineKeepScroll;
+    timelineKeepScroll = null;
 
     // 自動生成した内容をセルごとにまとめる(誕生・結婚は色分けした読み取り専用テキストとして表示する)
     var autoEntriesByCell = {};
@@ -2957,7 +2961,9 @@
 
     wrap.onscroll = function(){ headWrap.scrollLeft = wrap.scrollLeft; };
     // 開いた時点では、一番新しい年(直近)が見えるよう右端までスクロールしておく
-    wrap.scrollLeft = wrap.scrollWidth;
+    // 未来の列を増やした直後は、直前の表示位置を保つ
+    wrap.scrollLeft = (keepScroll !== null) ? keepScroll : wrap.scrollWidth;
+    headWrap.scrollLeft = wrap.scrollLeft;
     renderTimelineCategories();
   }
   function renderTimelineCategories(){
@@ -3878,7 +3884,17 @@
     document.getElementById("timelineWrap").scrollBy({ left: -5 * TIMELINE_YEAR_COL_PX, behavior: "smooth" });
   });
   document.getElementById("timelineNextBtn").addEventListener("click", function(){
-    document.getElementById("timelineWrap").scrollBy({ left: 5 * TIMELINE_YEAR_COL_PX, behavior: "smooth" });
+    var wrap = document.getElementById("timelineWrap");
+    var nearEnd = wrap.scrollLeft + wrap.clientWidth >= wrap.scrollWidth - 5 * TIMELINE_YEAR_COL_PX;
+    if(nearEnd){
+      // 右端まで来たら、未来の年を5年分追加して、その分だけ右へ進める
+      timelineFutureYears += 5;
+      timelineKeepScroll = wrap.scrollLeft;
+      renderTimeline();
+      wrap.scrollBy({ left: 5 * TIMELINE_YEAR_COL_PX, behavior: "smooth" });
+    }else{
+      wrap.scrollBy({ left: 5 * TIMELINE_YEAR_COL_PX, behavior: "smooth" });
+    }
   });
 
   document.getElementById("timelineCategoryAddBtn").addEventListener("click", function(){
