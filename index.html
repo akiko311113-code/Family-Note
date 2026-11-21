@@ -2491,6 +2491,13 @@
   }
   // Googleフォトの共有リンクとして使えるURLだけを受け付ける(それ以外のURLや危険なリンクは弾く)
   function normalizeGooglePhotosLink(text){
+    // 日付(例: 2025-12-30 / 2025/12/30 / 2025年12月30日)が入力されたら、その日の写真を探すGoogleフォトの検索リンクにする
+    var m = (text || "").trim().match(/^(\d{4})\s*(?:[-\/.]|年)\s*(\d{1,2})\s*(?:[-\/.]|月)\s*(\d{1,2})\s*日?$/);
+    if(m){
+      var dt = new Date(+m[1], +m[2] - 1, +m[3]);
+      if(dt.getFullYear() !== +m[1] || dt.getMonth() !== +m[2] - 1 || dt.getDate() !== +m[3]) return null;
+      return "https://photos.google.com/search/" + encodeURIComponent(m[1] + "年" + (+m[2]) + "月" + (+m[3]) + "日");
+    }
     var u;
     try{ u = new URL((text || "").trim()); }catch(e){ return null; }
     if(u.protocol !== "https:") return null;
@@ -2695,11 +2702,11 @@
   });
   document.getElementById("photoModalAddLinkBtn").addEventListener("click", function(){
     if(!currentPhotoKey) return;
-    var input = window.prompt("GoogleフォトのURLを貼り付けてください(例: https://photos.app.goo.gl/...)");
+    var input = window.prompt("GoogleフォトのURLを貼り付けるか、日付を入力してください。\n日付(例: 2025-12-30)を入れると、その日の写真の検索画面が開きます。");
     if(input === null || !input.trim()) return;
     var link = normalizeGooglePhotosLink(input);
     if(!link){
-      window.alert("GoogleフォトのURL(photos.app.goo.gl または photos.google.com)ではないようです。");
+      window.alert("GoogleフォトのURL(photos.app.goo.gl または photos.google.com)か、日付(例: 2025-12-30)を入力してください。");
       return;
     }
     var key = currentPhotoKey;
