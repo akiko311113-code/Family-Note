@@ -889,6 +889,7 @@
   }
   .photo-modal-desc-jump:hover{ opacity: 0.8; }
   .photo-modal-viewport.is-empty{ min-height: 160px; }
+  .photo-modal-link{ margin: 48px 16px; text-decoration: none; }
   .photo-modal-gallery-links{ display: flex; flex-wrap: wrap; gap: 8px; }
   .photo-modal-gallery-link{
     font-size: 13px;
@@ -1095,6 +1096,7 @@
     <div class="photo-modal-inner">
       <div class="photo-modal-viewport" id="photoModalViewport">
         <img id="photoModalImg" class="photo-modal-img" alt="">
+        <a id="photoModalLink" class="btn photo-modal-link" target="_blank" rel="noopener noreferrer" style="display:none;">Googleフォトで開く ↗</a>
       </div>
       <div class="photo-modal-nav">
         <button type="button" class="btn btn-ghost" id="photoModalPrevBtn">◀ 前へ</button>
@@ -1112,6 +1114,7 @@
         <button type="button" class="btn btn-ghost" id="photoModalZoomInBtn">拡大 ＋</button>
         <span class="spacer"></span>
         <button type="button" class="btn" id="photoModalAddBtn">写真を追加</button>
+        <button type="button" class="btn" id="photoModalAddLinkBtn">Googleフォトのリンクを追加</button>
         <button type="button" class="btn btn-ghost" id="photoModalDeleteBtn">削除</button>
         <button type="button" class="btn" id="photoModalCloseBtn">閉じる</button>
       </div>
@@ -2476,6 +2479,25 @@
       });
     });
   }
+  function addPhotoLink(entryKey, link){
+    return openPhotoDB().then(function(db){
+      return new Promise(function(resolve, reject){
+        var tx = db.transaction(TIMELINE_PHOTO_STORE, "readwrite");
+        tx.objectStore(TIMELINE_PHOTO_STORE).add({ entryKey: entryKey, link: link, addedAt: Date.now() });
+        tx.oncomplete = function(){ resolve(); };
+        tx.onerror = function(){ reject(tx.error); };
+      });
+    });
+  }
+  // Googleフォトの共有リンクとして使えるURLだけを受け付ける(それ以外のURLや危険なリンクは弾く)
+  function normalizeGooglePhotosLink(text){
+    var u;
+    try{ u = new URL((text || "").trim()); }catch(e){ return null; }
+    if(u.protocol !== "https:") return null;
+    var host = u.hostname.toLowerCase();
+    var ok = host === "photos.app.goo.gl" || host === "photos.google.com" || host === "photos.fife.usercontent.google.com";
+    return ok ? u.href : null;
+  }
   function getPhotosByEntryKey(entryKey){
     return openPhotoDB().then(function(db){
       return new Promise(function(resolve, reject){
@@ -2550,6 +2572,9 @@
     var img = document.getElementById("photoModalImg");
     var viewport = document.getElementById("photoModalViewport");
     if(currentPhotoObjectUrl){ URL.revokeObjectURL(currentPhotoObjectUrl); currentPhotoObjectUrl = null; }
+    var linkEl = document.getElementById("photoModalLink");
+    linkEl.style.display = "none";
+    img.style.display = "";
     if(!photo){
       img.removeAttribute("src");
       viewport.classList.add("is-empty");
@@ -2560,7 +2585,13 @@
       return;
     }
     viewport.classList.remove("is-empty");
-    if(photo.blob){
+    if(photo.link){
+      // Googleフォトのリンク(画像そのものは保存せず、押すとGoogleフォトが開く)
+      img.removeAttribute("src");
+      img.style.display = "none";
+      linkEl.href = photo.link;
+      linkEl.style.display = "";
+    }else if(photo.blob){
       currentPhotoObjectUrl = URL.createObjectURL(photo.blob);
       img.src = currentPhotoObjectUrl;
     }else{
@@ -2661,6 +2692,26 @@
   });
   document.getElementById("photoModalAddBtn").addEventListener("click", function(){
     document.getElementById("timelinePhotoFile").click();
+  });
+  document.getElementById("photoModalAddLinkBtn").addEventListener("click", function(){
+    if(!currentPhotoKey) return;
+    var input = window.prompt("GoogleフォトのURLを貼り付けてください(例: https://photos.app.goo.gl/...)");
+    if(input === null || !input.trim()) return;
+    var link = normalizeGooglePhotosLink(input);
+    if(!link){
+      window.alert("GoogleフォトのURL(photos.app.goo.gl または photos.google.com)ではないようです。");
+      return;
+    }
+    var key = currentPhotoKey;
+    addPhotoLink(key, link).then(function(){
+      return getCombinedPhotos(key);
+    }).then(function(photos){
+      currentPhotos = photos;
+      currentPhotoIndex = photos.length - 1;
+      showPhotoModal();
+    }).catch(function(){
+      window.alert("リンクの保存に失敗しました。もう一度お試しください。");
+    });
   });
   document.getElementById("photoModalDeleteBtn").addEventListener("click", function(){
     if(!currentPhotos.length) return;
