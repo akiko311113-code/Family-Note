@@ -876,18 +876,6 @@
   .photo-modal-desc-display:hover{ background: var(--surface-2); border-color: var(--line); }
   .photo-modal-desc-display:empty::before{ content: "(タップして書き込む)"; color: var(--ink-soft); }
   .photo-modal-desc-line{ display: flex; align-items: baseline; gap: 6px; }
-  .photo-modal-desc-jump{
-    flex: 0 0 auto;
-    border: none;
-    background: var(--accent-soft);
-    color: var(--accent-ink);
-    font-size: 11px;
-    line-height: 1;
-    padding: 3px 5px;
-    border-radius: 4px;
-    cursor: pointer;
-  }
-  .photo-modal-desc-jump:hover{ opacity: 0.8; }
   .photo-modal-viewport.is-empty{ min-height: 160px; }
   .photo-modal-link{ margin: 48px 16px; text-decoration: none; }
   .photo-modal-gallery-links{ display: flex; flex-wrap: wrap; gap: 8px; }
@@ -1117,9 +1105,9 @@
         <button type="button" class="btn btn-ghost" id="photoModalNextBtn">次へ ▶</button>
       </div>
       <div class="photo-modal-desc-wrap">
-        <label class="photo-modal-desc-label">詳しいメモ(この端末だけに保存されます) - 行頭の▶をタップするとその行の写真が表示されます</label>
+        <label class="photo-modal-desc-label">詳しいメモ(この端末だけに保存されます)</label>
         <div id="photoModalDescDisplay" class="photo-modal-desc-display" tabindex="0"></div>
-        <textarea id="photoModalDescEdit" class="photo-modal-desc" rows="4" placeholder="旅行の詳しい内容などを自由に書き込めます(1行ごとに、対応する写真にジャンプできます)" style="display:none;"></textarea>
+        <textarea id="photoModalDescEdit" class="photo-modal-desc" rows="4" placeholder="旅行の詳しい内容などを自由に書き込めます" style="display:none;"></textarea>
       </div>
       <div id="photoModalGalleryLinks" class="photo-modal-gallery-links" style="display:none;"></div>
       <div class="photo-modal-actions">
@@ -2437,10 +2425,6 @@
   // アイコンをタップして最初に開いた時に表示する写真の番号(配列内でのインデックス)。
   // 指定のない項目は0番目(先頭)を表示する。
   var AUTO_PHOTO_START_INDEX = {};
-  // メモの行ごとのジャンプ先を、配列のインデックスそのままではなく個別に指定したい場合に使う。
-  // 例: [1,2,3,4] は「1行目は配列の1番目(0始まり)、2行目は2番目…」という意味。
-  // 指定のない項目・行は、そのままの並び順(1行目→配列0番目)を使う。
-  var AUTO_PHOTO_LINE_JUMP = {};
   // 項目ごとに、その場で作った「候補写真ギャラリー」(Google Photosの日付検索)へのリンク。
   // 登録があるものだけ、写真ポップアップに「候補を見る」ボタンとして表示する。
   var AUTO_PHOTO_GALLERIES = {};
@@ -2658,32 +2642,15 @@
       renderDescDisplay();
     }).catch(function(){});
   }
-  // メモを行ごとに分け、各行の先頭に「▶」ボタンを付ける。押すと、その行と同じ順番の
-  // 写真(1行目→1枚目、2行目→2枚目…)にジャンプする。写真の数より行が多い場合は最後の写真を表示する。
+  // メモを行ごとに分けて表示する
   function renderDescDisplay(){
     var box = document.getElementById("photoModalDescDisplay");
     box.innerHTML = "";
     var lines = currentDescText.split("\n");
-    lines.forEach(function(line, idx){
+    lines.forEach(function(line){
       if(!line.trim()) return;
       var row = document.createElement("div");
       row.className = "photo-modal-desc-line";
-      if(currentPhotos.length){
-        var jumpBtn = document.createElement("button");
-        jumpBtn.type = "button";
-        jumpBtn.className = "photo-modal-desc-jump";
-        jumpBtn.textContent = "▶";
-        jumpBtn.title = "この行の写真を表示";
-        jumpBtn.addEventListener("click", function(ev){
-          ev.stopPropagation();
-          var jumpMap = AUTO_PHOTO_LINE_JUMP[currentPhotoKey];
-          var targetIdx = (jumpMap && jumpMap[idx] !== undefined) ? jumpMap[idx] : idx;
-          currentPhotoIndex = Math.min(targetIdx, currentPhotos.length - 1);
-          currentPhotoZoom = 1;
-          renderPhotoModal();
-        });
-        row.appendChild(jumpBtn);
-      }
       row.appendChild(document.createTextNode(line));
       box.appendChild(row);
     });
