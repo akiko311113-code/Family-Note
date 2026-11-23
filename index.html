@@ -1198,9 +1198,15 @@
     ];
   }
 
+  // 別名が旧姓の場合は「(旧姓)○○」の形で表示する
+  function altNameDisplay(p){
+    var a = (p.altName || "").trim();
+    return (a && p.altIsMaiden) ? "(旧姓)" + a : (p.altName || "");
+  }
   function normalizePerson(p){
     p.name = p.name || "";
     p.altName = p.altName || "";
+    p.altIsMaiden = !!p.altIsMaiden;
     p.relation = p.relation || "";
     p.birth = p.birth || "";
     p.deceased = !!p.deceased;
@@ -1656,7 +1662,7 @@
     var altNameInput = document.createElement("input");
     altNameInput.className = "field alt-name-field" + (editMode ? "" : " is-secondary-view");
     altNameInput.placeholder = "別名(英語名など)";
-    altNameInput.value = person.altName;
+    altNameInput.value = editMode ? person.altName : altNameDisplay(person);
     altNameInput.readOnly = !editMode;
     altNameInput.setAttribute("aria-label", "別名");
     altNameInput.addEventListener("input", function(){
@@ -1664,6 +1670,22 @@
       save();
     });
     if(editMode || person.altName) mainLine.appendChild(altNameInput);
+
+    if(editMode){
+      var maidenLabel = document.createElement("label");
+      maidenLabel.className = "maiden-check";
+      maidenLabel.style.cssText = "display:inline-flex;align-items:center;gap:4px;font-size:13px;color:var(--ink-soft);white-space:nowrap;";
+      var maidenBox = document.createElement("input");
+      maidenBox.type = "checkbox";
+      maidenBox.checked = !!person.altIsMaiden;
+      maidenBox.addEventListener("change", function(){
+        person.altIsMaiden = maidenBox.checked;
+        save();
+      });
+      maidenLabel.appendChild(maidenBox);
+      maidenLabel.appendChild(document.createTextNode("旧姓"));
+      mainLine.appendChild(maidenLabel);
+    }
 
     var relInput = document.createElement("input");
     relInput.className = "field relation-field";
@@ -2845,10 +2867,10 @@
     var husband, wife;
     if(isAHusband === true || isBHusband === false){ husband = personA; wife = personB; }
     else if(isBHusband === true || isAHusband === false){ husband = personB; wife = personA; }
-    else if(personB.altName.trim() && !personA.altName.trim()){ husband = personB; wife = personA; }
+    else if(personB.altName.trim() && !personB.altIsMaiden && !personA.altName.trim()){ husband = personB; wife = personA; }
     else{ husband = personA; wife = personB; }
     // 別名(英語名)・氏名のどちらでも、スペース区切りなら(例:MICHAEL JORDAN FOX)先頭の名だけを使う
-    var husbandSource = husband.altName.trim() ? husband.altName.trim() : husband.name.trim();
+    var husbandSource = (husband.altName.trim() && !husband.altIsMaiden) ? husband.altName.trim() : husband.name.trim();
     var husbandLabel = husbandSource.split(/\s+/)[0];
     var wifeGiven = givenNameOnly(wife, [husband.name, householdSurname()]);
     return husbandLabel + wifeGiven + "結婚";
@@ -3276,7 +3298,7 @@
     if(person.altName){
       var altEl = document.createElement("div");
       altEl.className = "tc-altname";
-      altEl.textContent = person.altName;
+      altEl.textContent = altNameDisplay(person);
       card.appendChild(altEl);
     }
     var bits = [];
