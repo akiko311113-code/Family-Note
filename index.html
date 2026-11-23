@@ -1661,7 +1661,7 @@
 
     var altNameInput = document.createElement("input");
     altNameInput.className = "field alt-name-field" + (editMode ? "" : " is-secondary-view");
-    altNameInput.placeholder = "別名(英語名など)";
+    altNameInput.placeholder = person.altIsMaiden ? "旧姓を入力(例:岡本)" : "別名(英語名など)";
     altNameInput.value = editMode ? person.altName : altNameDisplay(person);
     altNameInput.readOnly = !editMode;
     altNameInput.setAttribute("aria-label", "別名");
@@ -1680,11 +1680,13 @@
       maidenBox.checked = !!person.altIsMaiden;
       maidenBox.addEventListener("change", function(){
         person.altIsMaiden = maidenBox.checked;
+        altNameInput.placeholder = maidenBox.checked ? "旧姓を入力(例:岡本)" : "別名(英語名など)";
+        altNameInput.focus();
         save();
       });
       maidenLabel.appendChild(maidenBox);
       maidenLabel.appendChild(document.createTextNode("旧姓"));
-      mainLine.appendChild(maidenLabel);
+      mainLine.insertBefore(maidenLabel, altNameInput);
     }
 
     var relInput = document.createElement("input");
