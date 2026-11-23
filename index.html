@@ -2435,6 +2435,8 @@
   var TIMELINE_PHOTO_DB = "family-note-photos";
   var TIMELINE_PHOTO_STORE = "photos_v2";
   var TIMELINE_DESC_STORE = "descriptions_v1";
+  // ブラウザに「このサイトのデータは自動で消さないで」とお願いする(対応ブラウザのみ)
+  try{ if(navigator.storage && navigator.storage.persist) navigator.storage.persist(); }catch(e){}
   function openPhotoDB(){
     return new Promise(function(resolve, reject){
       if(!window.indexedDB){ reject(new Error("no-indexeddb")); return; }
@@ -2490,13 +2492,26 @@
       });
     });
   }
+  // 写真はBlobのままではなくバイト列(ArrayBuffer)として保存する。
+  // 一部のスマホ・ブラウザでは、Blobで保存した写真が後から読み出せなくなることがあるため。
+  function readBlobAsArrayBuffer(blob){
+    if(blob.arrayBuffer) return blob.arrayBuffer();
+    return new Promise(function(resolve, reject){
+      var fr = new FileReader();
+      fr.onload = function(){ resolve(fr.result); };
+      fr.onerror = function(){ reject(fr.error); };
+      fr.readAsArrayBuffer(blob);
+    });
+  }
   function addPhotoBlob(entryKey, blob){
-    return openPhotoDB().then(function(db){
-      return new Promise(function(resolve, reject){
-        var tx = db.transaction(TIMELINE_PHOTO_STORE, "readwrite");
-        tx.objectStore(TIMELINE_PHOTO_STORE).add({ entryKey: entryKey, blob: blob, addedAt: Date.now() });
-        tx.oncomplete = function(){ resolve(); };
-        tx.onerror = function(){ reject(tx.error); };
+    return readBlobAsArrayBuffer(blob).then(function(buf){
+      return openPhotoDB().then(function(db){
+        return new Promise(function(resolve, reject){
+          var tx = db.transaction(TIMELINE_PHOTO_STORE, "readwrite");
+          tx.objectStore(TIMELINE_PHOTO_STORE).add({ entryKey: entryKey, data: buf, type: blob.type || "image/jpeg", addedAt: Date.now() });
+          tx.oncomplete = function(){ resolve(); };
+          tx.onerror = function(){ reject(tx.error); };
+        });
       });
     });
   }
@@ -2619,6 +2634,9 @@
       img.style.display = "none";
       linkEl.href = photo.link;
       linkEl.style.display = "";
+    }else if(photo.data){
+      currentPhotoObjectUrl = URL.createObjectURL(new Blob([photo.data], { type: photo.type || "image/jpeg" }));
+      img.src = currentPhotoObjectUrl;
     }else if(photo.blob){
       currentPhotoObjectUrl = URL.createObjectURL(photo.blob);
       img.src = currentPhotoObjectUrl;
