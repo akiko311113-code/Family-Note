@@ -2422,9 +2422,6 @@
   // entryKey(manual_年_月_行番号)ごとに、既定表示する写真の相対パスを持つ。
   // 気に入らない場合はphotos/フォルダ内の該当ファイルを差し替えれば表示も変わる。
   var AUTO_PHOTO_DEFAULTS = {};
-  // アイコンをタップして最初に開いた時に表示する写真の番号(配列内でのインデックス)。
-  // 指定のない項目は0番目(先頭)を表示する。
-  var AUTO_PHOTO_START_INDEX = {};
   // 項目ごとに、その場で作った「候補写真ギャラリー」(Google Photosの日付検索)へのリンク。
   // 登録があるものだけ、写真ポップアップに「候補を見る」ボタンとして表示する。
   var AUTO_PHOTO_GALLERIES = {};
@@ -2581,7 +2578,7 @@
     currentPhotoKey = key;
     getCombinedPhotos(key).then(function(photos){
       currentPhotos = photos;
-      currentPhotoIndex = Math.min(AUTO_PHOTO_START_INDEX[key] || 0, Math.max(0, photos.length - 1));
+      currentPhotoIndex = Math.max(0, photos.length - 1); // 最後(いちばん新しく追加した写真)を最初に表示する
       showPhotoModal();
     }).catch(function(){
       window.alert("この端末・ブラウザでは写真の保存機能が使えないようです。");
