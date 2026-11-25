@@ -1216,6 +1216,29 @@
     return p;
   }
 
+  // 年表の「写真:○/○撮影○枚」の行(以前に自動で入れた撮影枚数の記録)
+  var TIMELINE_PHOTO_COUNT_LINE = /^\s*写真\s*[:：].*撮影\s*\d+\s*枚\s*$/;
+  // 上の行を保存データから削除する(この端末・ブラウザで1回だけ)。
+  // 後ろに別の行がある場合は空行にして、行番号(写真・メモとの対応)がずれないようにする。
+  function removePhotoCountLinesOnce(data){
+    var FLAG_KEY = "family-note-photo-count-lines-removed";
+    try{
+      if(localStorage.getItem(FLAG_KEY)) return;
+      if(!localStorage.getItem(STORAGE_KEY)) return;
+      var changed = false;
+      Object.keys(data.timelineOverrides).forEach(function(key){
+        var lines = String(data.timelineOverrides[key] || "").split("\n");
+        if(!lines.some(function(l){ return TIMELINE_PHOTO_COUNT_LINE.test(l); })) return;
+        lines = lines.map(function(l){ return TIMELINE_PHOTO_COUNT_LINE.test(l) ? "" : l; });
+        while(lines.length && !lines[lines.length - 1].trim()) lines.pop();
+        data.timelineOverrides[key] = lines.join("\n");
+        changed = true;
+      });
+      if(changed) localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+      localStorage.setItem(FLAG_KEY, "1");
+    }catch(e){}
+  }
+
   function loadState(){
     var parsed = null;
     try{
@@ -1283,6 +1306,7 @@
   }
 
   var state = loadState();
+  removePhotoCountLinesOnce(state);
   var editMode = false;
   var saveTimer = null;
 
@@ -2927,7 +2951,6 @@
     }
     row.appendChild(btn);
   }
-  var TIMELINE_PHOTO_COUNT_LINE = /^\s*写真\s*[:：].*撮影\s*\d+\s*枚\s*$/;
   function buildTimelineCellDisplay(rawText, cellKey){
     var box = document.createElement("div");
     box.className = "timeline-cell-display";
