@@ -2927,11 +2927,15 @@
     }
     row.appendChild(btn);
   }
+  var TIMELINE_PHOTO_COUNT_LINE = /^\s*写真\s*[:：].*撮影\s*\d+\s*枚\s*$/;
   function buildTimelineCellDisplay(rawText, cellKey){
     var box = document.createElement("div");
     box.className = "timeline-cell-display";
     String(rawText || "").split("\n").forEach(function(line, lineIdx){
       if(!line.trim()) return;
+      // 「写真:○/○撮影○枚」の行は年表に表示しない。行そのものは残すので、
+      // 他の行の番号(写真・メモとの対応)はずれない。
+      if(TIMELINE_PHOTO_COUNT_LINE.test(line)) return;
       var parsed = parseTimelineLine(line);
       var row = document.createElement("div");
       row.className = "timeline-entry";
