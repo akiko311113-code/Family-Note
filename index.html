@@ -1082,8 +1082,8 @@
   <div id="photoLinkDialog" class="photo-modal" style="display:none; z-index:60;">
     <div class="photo-modal-backdrop" id="photoLinkBackdrop"></div>
     <div class="photo-modal-inner" style="width:min(92vw, 420px);">
-      <label class="photo-modal-desc-label" for="photoLinkInput">日付(例: 2026年4月5日)か年月(例: 2026年4月)を入力してください。OKを押すと、その日またはその月の写真がGoogle Photosですぐ開きます。</label>
-      <input type="text" id="photoLinkInput" class="field" placeholder="例: 2026年4月 または 2026-04-05">
+      <label class="photo-modal-desc-label" for="photoLinkInput">日付(例: 2026年4月5日)、年月(例: 2026年4月)、年(例: 2026年)のどれかを入力してください。OKを押すと、その期間の写真がGoogle Photosですぐ開きます。</label>
+      <input type="text" id="photoLinkInput" class="field" placeholder="例: 2026年 / 2026年4月 / 2026-04-05">
       <div id="photoLinkError" style="color:var(--danger); font-size:13px;"></div>
       <div class="photo-modal-actions">
         <span class="spacer"></span>
@@ -2561,6 +2561,9 @@
       if(+ym[2] < 1 || +ym[2] > 12) return null;
       return "https://photos.google.com/search/" + encodeURIComponent(ym[1] + "年" + (+ym[2]) + "月");
     }
+    // 年だけ(例: 2026 / 2026年)なら、その1年分を探す検索リンクにする
+    var y = (text || "").trim().match(/^(\d{4})\s*年?$/);
+    if(y) return "https://photos.google.com/search/" + encodeURIComponent(y[1] + "年");
     var u;
     try{ u = new URL((text || "").trim()); }catch(e){ return null; }
     if(u.protocol !== "https:") return null;
@@ -2773,7 +2776,7 @@
     if(!input.trim()) return;
     var link = normalizeGooglePhotosLink(input);
     if(!link || link.indexOf("https://photos.google.com/search/") !== 0){
-      document.getElementById("photoLinkError").textContent = "日付か年月を入力してください(例: 2026年4月5日 / 2026年4月 / 2026-04)。";
+      document.getElementById("photoLinkError").textContent = "日付・年月・年のどれかを入力してください(例: 2026年4月5日 / 2026年4月 / 2026年)。";
       return;
     }
     closePhotoLinkDialog();
